@@ -313,6 +313,32 @@ press([]);
 ok(screen().l1.trim() === "", "RUN 模式 2nd+CLR 清掉第一行", JSON.stringify(screen().l1));
 reset();
 
+/* ================= 3c. 用鍵盤啟動程式（P + 數字） ================= */
+console.log("\n=== 用鍵盤執行 P1（P + 1）===");
+reset();
+fx().loadSample("一元二次方程式 (P1)");
+press(["pk", "1"]);                       // P → 1
+press([]);
+ok(fx().M.prog.running === true && fx().M.prog.paused === true,
+  "P → 1 立刻啟動 P1 並停在第一個提示");
+ok(screen().l1.indexOf("Input A?") === 0, "畫面顯示 Input A?", screen().l1);
+press(["1"]); press(["exe"]); press([]);
+ok(screen().l1.indexOf("Input B?") === 0,
+  "輸入 1 後按 EXE → 進到 Input B?（EXE 不會被誤當成跳過提示）", screen().l1);
+press(["ac"]);                            // 中止
+ok(fx().M.prog.running === false, "AC 可中止執行中的程式");
+reset();
+fx().loadSample("圓面積（P3）");
+press(["pk", "3"]);
+press([]);
+ok(fx().M.prog.paused === true && screen().l1.indexOf("A=") === 0, "P → 3 啟動 P3（圓面積）", screen().l1);
+press(["ac"]);
+reset();
+press(["mode", "1"]);
+press(["pk", "5"]);
+ok(fx().M.area === "P5" && fx().M.mode === 1, "WRT 模式下 P → 5 = 切換錄製目標到 P5", fx().M.area);
+reset();
+
 /* ================= 4. 顯示 ================= */
 console.log("\n=== 點矩陣顯示 ===");
 reset();

@@ -260,6 +260,7 @@
 
     <div class="card">
       <h2>程式區塊</h2>
+      <p class="warn"><b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<b>MODE 1 (WRT)</b> 時點區塊 = 切換錄製目標區塊。</p>
       <div class="pgrid" id="pgrid"></div>
       <pre class="list" id="listing">（尚無程式步）</pre>
       <div class="row">
@@ -801,16 +802,8 @@ function wrtPress(k, v){
       M.lastStep = null;
       if (k === "digit"){ setMode(v); return; }
     } else if (p._kind === "area"){
-      if (k === "digit"){
-        p.buf += String(v);
-        var ix = parseInt(p.buf, 10);
-        if (p.buf.length >= 2 || ix > 1){
-          if (ix >= 0 && ix < 20){ M.area = "P" + ix; M.dirty = true; }
-          M.lastStep = null;
-        }
-        return;
-      }
       M.lastStep = null;
+      if (k === "digit" && v >= 0 && v <= 9){ M.area = "P" + v; M.dirty = true; return; }
     } else {
       M.lastStep = null;
     }
@@ -1131,14 +1124,10 @@ function press(k, v){
       M.lastStep = null;
       if (k === "digit"){ setMode(v); return; }
     } else if (p._kind === "area"){
-      if (k === "digit"){
-        p.buf += String(v);
-        var ix = parseInt(p.buf, 10);
-        if (p.buf.length >= 2 || ix > 1){ M.lastStep = null; runAreaSel(ix); }
-        return;
-      }
       M.lastStep = null;
-      runAreaSel(parseInt(p.buf || "0", 10));
+      /* P0–P9：按一個數字就立刻執行（P10–P19 請用面板的區塊按鈕） */
+      if (k === "digit"){ runAreaSel(v); return; }
+      return;                                          // 非數字鍵 = 取消
     } else if (p._kind === "reg"){
       if (k === "digit"){
         p.buf += String(v);
