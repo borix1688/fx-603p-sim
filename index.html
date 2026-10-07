@@ -248,6 +248,7 @@
         <div class="stat"><b>AREA</b><span id="s-area">P0</span></div>
         <div class="stat"><b>STEP</b><span id="s-step">0</span></div>
         <div class="stat"><b>X</b><span id="s-x">0</span></div>
+        <div class="stat"><b>待完成運算</b><span id="s-pend">—</span></div>
       </div>
       <p class="warn">狀態：<b id="s-save">—</b></p>
     </div>
@@ -321,12 +322,16 @@
         <li><code>=</code>：完成運算；程式跑到區塊結尾會自動停止。</li>
       </ul>
       <h3>輸入負數（例如 -4）</h3>
+      <p class="warn">在「正要開始輸入一個數」的位置按下 <b>−</b>（減號），它就會當成<b>負號</b>：</p>
       <ul>
-        <li>按左下角的 <b>(−)</b> 鍵（黃色，獨立位置不會誤點到 <code>+</code>）：<b>4</b> → <b>(−)</b>，或 <b>(−)</b> → <b>4</b>，兩種順序都可以。</li>
-        <li>再按一次 <b>(−)</b> 可取消負號。</li>
-        <li>也可以先按 <code>−</code>（減號）再打 4，最後按 <code>=</code> 或 <code>EXE</code> 一樣得到 -4。</li>
-        <li>若按 <b>(−)</b> 打出的是字母 <code>L</code>，代表 <b>ALPHA 模式還開著</b>（看 LCD 的 ALPHA 指示燈），再按一次 <code>ALPHA</code> 關掉即可。</li>
+        <li><b>− 5 =</b> → <b>-5</b>（一開始就按減號 = 負數）</li>
+        <li><b>3 + − 5 =</b> → <b>-2</b>（運算子後面按減號也是負號）</li>
+        <li><b>5 − 3 =</b> → <b>2</b>（數字<b>後面</b>按減號才是相減）</li>
+        <li><b>5 − − 5 =</b> → <b>10</b>（5 減去 -5）</li>
+        <li>也可以用左下角的黃色 <b>(−)</b> 鍵：<b>4</b> → <b>(−)</b> 或 <b>(−)</b> → <b>4</b>，都能得到 -4，再按一次取消。</li>
+        <li>面板的「<b>待完成運算</b>」欄位會顯示目前卡著的運算（例如 <code>5 −</code>），這樣就不會看不懂顯示為什麼沒變。</li>
       </ul>
+      <p class="warn">若按 <b>(−)</b> 打出的是字母 <code>L</code>，代表 <b>ALPHA 模式還開著</b>（看 LCD 的 ALPHA 指示燈），再按一次 <code>ALPHA</code> 關掉即可。</p>
       <h3>2nd / INV 第二功能</h3>
       <ul>
         <li><b>INV</b> + sin/cos/tan = 反三角；INV + log/ln = 10^x／e^x。</li>
@@ -511,6 +516,7 @@ var M = {
   stack: [],           // 運算式運算子堆疊
   vals: [],            // 運算式數值堆疊
   xPushed: false,      // 目前的 X 是否已壓入 vals
+  expectOperand: true, // 是否「正要開始輸入一個運算元」（此時 − 當負號用）
   deg: true, rad:false, gra:false,
   fix: -1, sci: -1,
   alpha: false, alphaLine: "",
@@ -565,7 +571,7 @@ function curX(){
   return M.x;
 }
 function setX(v){
-  M.x = v; M.entry = null; M.xPushed = false; M.dirty = true;
+  M.x = v; M.entry = null; M.xPushed = false; M.expectOperand = false; M.dirty = true;
 }
 function entryText(){
   return M.entry === null ? fmtNum(M.x) : (M.entry === "" ? "0" : M.entry);
@@ -607,6 +613,7 @@ function binOp(op){
          prec(M.stack[M.stack.length-1]) >= prec(op)) reduceTop();
   M.stack.push(op);
   if (M.vals.length) M.x = M.vals[M.vals.length-1];
+  M.expectOperand = true;                    // 接下來要輸入下一個運算元
   M.dirty = true;
 }
 function opParen(open){
@@ -616,13 +623,13 @@ function opParen(open){
       M.stack.push("*");                      // 隱含乘法：2(3+4)
     }
     M.stack.push("(");
-    M.entry = null; M.x = 0; M.xPushed = false;
+    M.entry = null; M.x = 0; M.xPushed = false; M.expectOperand = true;
   } else {
     if (!M.xPushed) pushX();
     while (M.stack.length && M.stack[M.stack.length-1] !== "(") reduceTop();
     if (M.stack.length) M.stack.pop();
     M.x = M.vals.length ? M.vals[M.vals.length-1] : 0;
-    M.xPushed = true;
+    M.xPushed = true; M.expectOperand = false;
   }
   M.dirty = true;
 }
@@ -707,7 +714,7 @@ function inputDigit(ch){
   M.entry += ch;
   M.x = parseFloat(M.entry);
   if (isNaN(M.x)) M.x = 0;
-  M.xPushed = false;
+  M.xPushed = false; M.expectOperand = false;
   M.dirty = true;
 }
 function entryExp(){
@@ -721,7 +728,7 @@ function entrySign(){
   if (M.entry.charAt(0) === "-") M.entry = M.entry.slice(1);
   else M.entry = "-" + M.entry;
   M.x = parseFloat(M.entry) || 0;
-  M.xPushed = false;
+  M.xPushed = false; M.expectOperand = false;
   M.dirty = true;
 }
 function delKey(){
@@ -746,7 +753,7 @@ function delKey(){
   M.dirty = true;
 }
 function clrKey(){
-  M.entry = null; M.x = 0; M.xPushed = false;
+  M.entry = null; M.x = 0; M.xPushed = false; M.expectOperand = true;
   M.stack = []; M.vals = [];
   M.lastStep = null;
   clrErr();
@@ -1196,8 +1203,15 @@ function press(k, v){
     case "dot":    inputDigit("."); return;
     case "exp":    entryExp(); return;
     case "sign":   entrySign(); return;
-    case "add": case "sub": case "mul": case "div":
-      binOp({add:"+",sub:"-",mul:"*",div:"/"}[k]); return;
+    case "add": case "mul": case "div":
+      binOp({add:"+",mul:"*",div:"/"}[k]); return;
+    case "sub":
+      /* 在「正要開始輸入一個數」的位置，減號就是負號：
+         − 5 = → -5、3 + − 5 = → -2；要相減請在數字後面按 − */
+      if (M.expectOperand){
+        M.entry = "-"; M.xPushed = false; M.expectOperand = false; M.dirty = true; return;
+      }
+      binOp("-"); return;
     case "xpy":    binOp("^"); return;
     case "lp":     opParen(true); return;
     case "rp":     opParen(false); return;
@@ -1223,6 +1237,15 @@ var sSave = document.getElementById("s-save");
 var sMode2 = document.getElementById("s-mode2");
 var sArea2 = document.getElementById("s-area2");
 var btnRun = document.getElementById("btn-run");
+var sPend = document.getElementById("s-pend");
+/* 目前卡著的運算（例如 5 −），讓使用者看得懂顯示為什麼沒變 */
+function pendingExpr(){
+  if (!M.stack.length) return "—";
+  var sym = { "+":"+", "-":"−", "*":"×", "/":"÷", "^":"^", "(":"(" };
+  var s = M.stack.map(function(o){ return sym[o] || o; }).join(" ");
+  var v = M.vals.length ? fmtNum(M.vals[M.vals.length - 1]) : fmtNum(curX());
+  return v + " " + s;
+}
 var listingEl = document.getElementById("listing");
 var totalEl = document.getElementById("s-total");
 
@@ -1270,6 +1293,7 @@ function render(){
   sArea.textContent = M.area;
   sStep.textContent = String(area().length);
   sX.textContent = fmtNum(curX());
+  if (sPend) sPend.textContent = pendingExpr();
   totalEl.textContent = String(totalSteps());
   /* 面板上的模式／區塊提示與快速執行按鈕 */
   if (sMode2) sMode2.textContent = ["RUN","WRT","EDIT"][M.mode];
@@ -1658,7 +1682,7 @@ document.getElementById("btn-copy-list").addEventListener("click", function(){
    17. 啟動
    ========================================================= */
 /* 版本標記：方便確認手機／瀏覽器有沒有拿到最新版（請於每次更新時遞增） */
-var BUILD = "v1.7";
+var BUILD = "v1.8";
 document.getElementById("build").textContent = BUILD;
 
 /* 啟動：先載回使用者存過的狀態；若是第一次開啟（或還沒播種過），
