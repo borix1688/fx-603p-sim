@@ -107,6 +107,22 @@ function reset() {
 function press(list) { fx().pressSeq(list); }
 function screen() { return fx().screen(); }
 
+/* ================= 0. 首次開啟自動載入範例 ================= */
+console.log("\n=== 首次開啟自動載入範例 ===");
+ok(fx().M.progs.P1.length === 131, "首次開啟 P1 已有「一元二次方程式」（131 步）",
+  fx().M.progs.P1.length);
+ok(fx().M.progs.P2.length === 13, "首次開啟 P2 已有「1..n 加總」（13 步）", fx().M.progs.P2.length);
+ok(fx().M.progs.P0.length === 12 && fx().M.progs.P3.length === 7,
+  "P0 階乘（12 步）與 P3 圓面積（7 步）也一併載入",
+  "P0=" + fx().M.progs.P0.length + " P3=" + fx().M.progs.P3.length);
+ok(store["fx603p.seeded.v1"] === "1", "播種標記已寫入 localStorage（只播一次）");
+reset();
+ok(fx().M.progs.P1.length === 0, "清空後 P1 為空");
+els["btn-seed"].click();
+ok(fx().M.progs.P1.length === 131 && fx().M.progs.P2.length === 13,
+  "按「載入全部範例」可一鍵還原預設", fx().M.progs.P1.length + "/" + fx().M.progs.P2.length);
+reset();
+
 /* ================= 1. 計算 ================= */
 console.log("\n=== 計算引擎 ===");
 reset();
@@ -480,6 +496,15 @@ ok(lit0 === 19 && screen().l2.indexOf("0") === 0, "CLR 後顯示 0（19 個點�
 
   const txt = fx().txtDump();
   ok(txt.indexOf("NUM 123") > 0 && txt.indexOf("M003=") > 0, "TXT 清單含程式步與記憶體");
+
+  /* --- 使用者自己清空過，就不該再被自動塞回範例 --- */
+  delete global.__fx;
+  Object.keys(els).forEach((k) => delete els[k]);
+  store["fx603p.state.v1"] = JSON.stringify({ v: 1, mode: 0, area: "P0", progs: {}, regs: [] });
+  eval(js);
+  ok(global.__fx.M.progs.P1.length === 0 && global.__fx.M.progs.P2.length === 0,
+    "使用者清空過之後，重新開啟不會再被塞回範例（尊重使用者）",
+    "P1=" + global.__fx.M.progs.P1.length);
 
   console.log("\n" + (fails === 0 ? "ALL PASS" : fails + " FAILED"));
   process.exit(fails === 0 ? 0 : 1);

@@ -276,8 +276,10 @@
     </div>
 
     <div class="card">
-      <h2>範例程式（一鍵載入）</h2>
+      <h2>範例程式（可一鍵載入）</h2>
       <div class="row" id="samples"></div>
+      <p class="warn"><b>首次開啟會自動把這四個範例載進 P0–P3</b>（P1 = 一元二次方程式），所以直接 `MODE 0` → `P` → `1` 就能跑。之後你自己改的內容就是你的，不會被覆蓋；想還原預設就按下面的按鈕。</p>
+      <div class="row"><button class="btn" id="btn-seed">載入全部範例（覆蓋 P0–P3）</button></div>
       <p class="warn"><b>一元二次方程式 (P1)</b>：載入後切到 <b>MODE 0</b> → 按 <b>P</b> → <b>1</b> → 依序輸入 A、B、C（每項按 <b>EXE</b>）→ 顯示 <code>two real roots</code>（按 EXE 續看 x1、x2）或 <code>no real root</code>。A=0 會顯示 <code>not quadratic</code>。</p>
       <p class="warn">其他範例：載入後切到 <b>MODE 0 (RUN)</b> → 輸入數字 → 按 <b>P</b> 再按區塊編號（例如 P0）即可執行。程式內用 <code>HLT</code> 等輸入，按 <b>EXE</b> 繼續。</p>
     </div>
@@ -1496,6 +1498,14 @@ function loadSample(name){
   autosave();
   renderPGrid(); renderListing();
 }
+/* 把全部範例寫進各自的區塊（P0 階乘、P1 方程式、P2 加總、P3 圓面積） */
+function seedSamples(){
+  SAMPLES.forEach(function(s){
+    M.progs[s.area] = JSON.parse(JSON.stringify(s.steps));
+  });
+  M.area = "P1";
+  M.dirty = true;
+}
 
 /* =========================================================
    16. 事件綁定
@@ -1568,6 +1578,11 @@ document.getElementById("file-import").addEventListener("change", function(e){
   fr.readAsText(f);
   e.target.value = "";
 });
+document.getElementById("btn-seed").addEventListener("click", function(){
+  seedSamples();
+  autosave();
+  renderPGrid(); renderListing(); render();
+});
 document.getElementById("btn-clear-all").addEventListener("click", function(){
   AREAS.forEach(function(a){ M.progs[a] = []; });
   M.alphaLine = ""; M.dirty = true;
@@ -1593,7 +1608,19 @@ document.getElementById("btn-copy-list").addEventListener("click", function(){
 /* =========================================================
    17. 啟動
    ========================================================= */
-loadState();
+/* 啟動：先載回使用者存過的狀態；若是第一次開啟（或還沒播種過），
+   自動把內建範例寫進 P0–P3，這樣一打開就有 P1 的一元二次方程式可以跑。
+   播種只做一次（用 localStorage 標記），之後使用者自己清空就不會再被塞回來。 */
+var restored = loadState();
+var seededFlag = false;
+try { seededFlag = !!window.localStorage.getItem("fx603p.seeded.v1"); } catch (e) {}
+if (!restored || !seededFlag){
+  seedSamples();
+  try { window.localStorage.setItem("fx603p.seeded.v1", "1"); } catch (e) {}
+  autosave();
+}else{
+  M.area = M.area || "P1";
+}
 renderLib();
 renderSamples();
 renderPGrid();

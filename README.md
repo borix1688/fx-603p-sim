@@ -1,4 +1,4 @@
-# CASIO FX-603P 模擬器（Keystroke Programmable）
+﻿# CASIO FX-603P 模擬器（Keystroke Programmable）
 
 > 🌐 線上部屬（啟用 GitHub Pages 後）：<https://borix1688.github.io/fx-603p-sim/>
 
@@ -41,7 +41,9 @@
 
 ## 內建程式：一元二次方程式 ax²+bx+c=0（P1）
 
-面板按「一元二次方程式 (P1)」即載入到 **P1**。用法：
+**首次開啟時會自動把內建範例載進 P0–P3，所以打開網站 P1 就已經有一元二次方程式可以直接跑。**（播種只做一次；你自己清空或改寫後不會再被覆蓋。想還原預設按面板的「載入全部範例」。）
+
+用法：
 
 1. `MODE` `0`（RUN）→ `P` `1`
 2. `Input A?` → 輸入 A → `EXE`
@@ -129,3 +131,4 @@ node .\selftest.js
 - [Wikipedia: Casio FX-603P](https://en.wikipedia.org/wiki/Casio_FX-603P)
 - [Wikipedia: Casio FX-602P series](https://en.wikipedia.org/wiki/Casio_FX-602P_series)
 - [FX-602P/603P 資源站（含 token list，原站已歸檔）](http://fx-602p.krischik.com/index.php/FX-603P/HomePage)
+
