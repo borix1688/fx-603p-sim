@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CASIO FX-603P 模擬器 · Keystroke Programmable Calculator</title>
+<style>
+  :root{
+    --dot:#0d1710;
+    --on:#a8ffc0;
+    --off:rgba(168,255,192,.07);
+    --case:#2a2d33;
+    --case2:#191c21;
+    --key:#d7dbe1;
+    --key2:#a9afb8;
+    --accent:#e8a33d;
+    --cw:9px;              /* 單一 dot 的邊長基準 */
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;overflow-x:hidden;-webkit-text-size-adjust:100%;
+    background:radial-gradient(900px 520px at 22% -10%,#252a31,#0d0f12 66%);
+    color:#e9eef5;font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;gap:22px;justify-content:center;align-items:flex-start;padding:22px 16px 60px;flex-wrap:wrap}
+
+  /* ---------------- 機身 ---------------- */
+  .device{
+    width:430px;flex:0 0 auto;border-radius:16px;padding:14px 14px 18px;
+    background:linear-gradient(160deg,#3a3e45,#22252a 45%,#15181c);
+    box-shadow:0 26px 55px rgba(0,0,0,.65),inset 0 1px 0 #ffffff22,inset 0 -2px 8px #00000066;
+    position:relative;
+  }
+  .toprow{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 8px}
+  .brand{font-weight:800;letter-spacing:.16em;font-size:15px;color:#e6eaf0}
+  .brand small{display:block;font-size:7.5px;letter-spacing:.2em;color:#98a1ad;font-weight:700;margin-top:1px}
+  .model{font-size:10px;letter-spacing:.1em;color:#c3cad3;font-weight:700;text-align:right}
+  .model em{display:block;font-style:normal;font-size:7.5px;color:#8b939e;letter-spacing:.06em}
+
+  /* ---------------- LCD ---------------- */
+  .lcdwrap{background:linear-gradient(180deg,#0b0f0c,#141a15);border-radius:10px;padding:9px 10px 7px;
+    box-shadow:inset 0 3px 10px #000000cc,0 1px 0 #ffffff14}
+  .dotline{display:flex;gap:calc(var(--cw) * .7);justify-content:flex-start;margin:2px 0}
+  .dcell{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(7,1fr);
+    gap:calc(var(--cw) * .12);width:calc(var(--cw) * 5.6);height:calc(var(--cw) * 7.8)}
+  .dcell i{background:var(--off);border-radius:50%}
+  .dcell i.on{background:var(--on);box-shadow:0 0 calc(var(--cw) * .8) rgba(168,255,192,.75)}
+  .lcdside{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:4px}
+  .step{display:flex;gap:calc(var(--cw)*.6);align-items:center}
+  .step .dcell{width:calc(var(--cw)*3.6);height:calc(var(--cw)*5.2)}
+  .indicators{display:flex;flex-wrap:wrap;gap:3px 7px;justify-content:flex-end;max-width:230px}
+  .ind{font:700 7.5px/1 ui-monospace,Consolas,monospace;letter-spacing:.06em;color:#2f4636;
+    background:#0f150f;padding:2px 4px;border-radius:3px}
+  .ind.on{color:#0d1a10;background:var(--on);box-shadow:0 0 6px rgba(168,255,192,.6)}
+
+  /* ---------------- 按鍵 ---------------- */
+  .keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+  .key{
+    position:relative;border:0;cursor:pointer;user-select:none;
+    height:34px;border-radius:6px;color:#1b1f24;
+    font:700 11px/1 "Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(180deg,#e6e9ee,#b9bfc8);
+    box-shadow:0 2px 0 #6f757d,0 3px 5px rgba(0,0,0,.35),inset 0 1px 0 #fff;
+    transition:transform .04s,box-shadow .04s,filter .1s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .key:active,.key.press{transform:translateY(2px);box-shadow:0 0 0 #6f757d,0 1px 3px rgba(0,0,0,.35),inset 0 1px 0 #fff}
+  .key:hover{filter:brightness(1.05)}
+  .key.fn{background:linear-gradient(180deg,#cfd4db,#9aa1aa);font-size:10px}
+  .key.num{background:linear-gradient(180deg,#f2f4f7,#c9ced6);font-size:13px}
+  .key.op{background:linear-gradient(180deg,#5c6570,#39414b);color:#f2f6fa;font-size:13px;
+    box-shadow:0 2px 0 #232931,0 3px 5px rgba(0,0,0,.35),inset 0 1px 0 #ffffff2e}
+  .key.pgm{background:linear-gradient(180deg,#6d7f8f,#43525f);color:#eef4fa;font-size:9.5px}
+  .key.exe{background:linear-gradient(180deg,#8fd7a2,#3f9c5c);color:#062a12;font-size:11px}
+  .key.acc{background:linear-gradient(180deg,#e6a35c,#b96a1e);color:#2b1400;font-size:10px}
+  .key.warn{background:linear-gradient(180deg,#e2837a,#b8453a);color:#fff;font-size:11px}
+  .key .al{position:absolute;right:3px;top:2px;font:700 6.5px/1 ui-monospace,monospace;color:#7c828b;letter-spacing:0}
+  .key.op .al,.key.pgm .al,.key.exe .al,.key.acc .al,.key.warn .al{color:#ffffff8c}
+  .key .hint{position:absolute;left:3px;bottom:1px;font:700 6.5px/1 ui-monospace,monospace;color:#8b9099}
+  .key.op .hint,.key.pgm .hint{color:#ffffff8c}
+
+  /* ---------------- 面板 ---------------- */
+  .panel{width:520px;max-width:100%;flex:1 1 420px;display:flex;flex-direction:column;gap:12px}
+  .card{background:#15181d;border:1px solid #242a32;border-radius:13px;padding:13px 15px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .card h2{margin:0 0 8px;font-size:13.5px;letter-spacing:.05em;color:#9fd8ff}
+  .card h3{margin:11px 0 6px;font-size:12px;color:#cfd6e0}
+  .card p,.card li{font-size:12.4px;line-height:1.6;color:#c6cedb;margin:4px 0}
+  .card ul{padding-left:17px;margin:4px 0}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .btn{background:linear-gradient(180deg,#e7eaef,#c3c9d1);border:0;border-radius:7px;color:#22272d;
+    font:700 11.5px/1 "Segoe UI",system-ui,sans-serif;padding:7px 11px;cursor:pointer;
+    box-shadow:0 1px 2px rgba(0,0,0,.45),inset 0 1px 0 #fff}
+  .btn:active{transform:translateY(1px)}
+  .btn.pri{background:linear-gradient(180deg,#8fd7a2,#3f9c5c);color:#062a12}
+  .btn.dan{background:linear-gradient(180deg,#e2837a,#b8453a);color:#fff}
+  input[type=text],input[type=number]{background:#0f1319;border:1px solid #2b323c;color:#e9eef5;
+    border-radius:7px;padding:6px 8px;font:600 12px ui-monospace,monospace}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat{background:#10141a;border:1px solid #242b34;border-radius:9px;padding:6px 9px}
+  .stat b{display:block;font-size:8.5px;letter-spacing:.13em;color:#7d8797;font-weight:700}
+  .stat span{font:700 13px/1.4 ui-monospace,Consolas,monospace;color:#a8ffc0;word-break:break-all}
+  pre.list{background:#0d1015;border:1px solid #232a33;border-radius:9px;padding:9px 11px;margin:6px 0;
+    font:600 11.5px/1.5 ui-monospace,Consolas,monospace;color:#bcd3e6;max-height:230px;overflow:auto;white-space:pre}
+  .libitem{display:flex;align-items:center;gap:6px;justify-content:space-between;
+    background:#10141a;border:1px solid #242b34;border-radius:8px;padding:6px 9px;margin:5px 0}
+  .libitem .nm{font:700 12px ui-monospace,monospace;color:#dbe6f2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .libitem .mt{font-size:10px;color:#7d8797;white-space:nowrap}
+  .libitem .acts{display:flex;gap:4px;flex:0 0 auto}
+  .mini{font:700 10.5px/1 system-ui;padding:5px 8px;border-radius:6px}
+  table{border-collapse:collapse;width:100%;margin-top:6px;font-size:11.5px}
+  th,td{border:1px solid #242a32;padding:4px 6px;text-align:left;color:#c6cedb}
+  th{background:#1c2128;color:#9fd8ff;font-weight:700}
+  kbd{background:#232a33;border:1px solid #333c48;border-bottom-width:2px;border-radius:5px;padding:1px 5px;
+    font:600 10.5px ui-monospace,monospace;color:#dbe3ee}
+  .warn{font-size:11.5px;color:#9aa5b4}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;background:#2b3947;color:#a8cbe8}
+  a{color:#7fc4ff}
+  .pkey{padding:5px 0;font:700 10.5px/1 ui-monospace,monospace;border-radius:6px;border:1px solid #2f3742;
+    background:#1b2027;color:#cfe0ef;cursor:pointer}
+  .pkey.act{background:#2f4a5e;color:#eaf6ff;border-color:#4d7f9f}
+  .pgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+
+  @media (max-width: 900px){
+    .app{flex-direction:column;align-items:center;gap:16px;padding:14px 10px 44px}
+    .device{width:min(430px,100%)}
+    .panel{width:100%;max-width:640px;flex:0 0 auto}
+  }
+  @media (max-width: 470px){
+    :root{--cw:min(9px, calc((100vw - 96px) / 62))}
+    .keys{gap:4px}
+    .key{height:32px;font-size:10px;border-radius:5px}
+    .key.num{font-size:12px}
+    .key .hint{display:none}
+    .card{padding:11px 12px}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media (pointer:coarse){
+    .key{height:38px}
+    .key{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= 機身 ================= -->
+  <div class="device">
+    <div class="toprow">
+      <div class="brand">CASIO<small>PROGRAMMABLE CALCULATOR</small></div>
+      <div class="model">FX-603P<em>6144 STEPS · 110 MEMORIES</em></div>
+    </div>
+
+    <div class="lcdwrap">
+      <div id="lcd"></div>
+      <div class="lcdside">
+        <div class="step" id="stepdisp"></div>
+        <div class="indicators" id="indicators"></div>
+      </div>
+    </div>
+
+    <div class="keys" id="keys">
+      <button class="key fn"  data-k="2nd"   data-al="(">2nd</button>
+      <button class="key fn"  data-k="inv"   data-al=")">INV</button>
+      <button class="key fn"  data-k="alpha" data-al="=">ALPHA</button>
+      <button class="key fn"  data-k="mode"  data-al=";">MODE</button>
+      <button class="key acc" data-k="on">ON</button>
+
+      <button class="key fn" data-k="sin" data-al="Y">sin</button>
+      <button class="key fn" data-k="cos" data-al="Z">cos</button>
+      <button class="key fn" data-k="tan" data-al=" ">tan</button>
+      <button class="key fn" data-k="log" data-al="W">log</button>
+      <button class="key fn" data-k="ln"  data-al="X">ln</button>
+
+      <button class="key fn" data-k="x2"   data-al="S">x²</button>
+      <button class="key fn" data-k="sqrt" data-al="R">√</button>
+      <button class="key fn" data-k="invx" data-al="U">1/x</button>
+      <button class="key fn" data-k="xpy"  data-al="T">x^y</button>
+      <button class="key fn" data-k="fact" data-al="V">n!</button>
+
+      <button class="key fn" data-k="lp"  data-al="M">(</button>
+      <button class="key fn" data-k="rp"  data-al="N">)</button>
+      <button class="key fn" data-k="pi"  data-al="P">π</button>
+      <button class="key fn" data-k="pct" data-al="Q">%</button>
+      <button class="key fn" data-k="exp" data-al="O">EXP</button>
+
+      <button class="key fn" data-k="sto"    data-al=":">STO</button>
+      <button class="key fn" data-k="rcl"    data-al="?">RCL</button>
+      <button class="key fn" data-k="mplus"  data-al="&quot;">M+</button>
+      <button class="key fn" data-k="mminus" data-al="'">M−</button>
+      <button class="key fn" data-k="xym"    data-al="!">X↔Y</button>
+
+      <button class="key pgm" data-k="pk"   data-hint="AREA">P</button>
+      <button class="key pgm" data-k="lbl"  data-al="$">LBL</button>
+      <button class="key pgm" data-k="goto" data-al="#">GOTO</button>
+      <button class="key pgm" data-k="gsb"  data-al="%">GSB</button>
+      <button class="key pgm" data-k="rtn"  data-al="*">RTN</button>
+
+      <button class="key pgm" data-k="dsz" data-al="+">DSZ</button>
+      <button class="key pgm" data-k="isz" data-al=",">ISZ</button>
+      <button class="key pgm" data-k="hlt" data-al="-">HLT</button>
+      <button class="key pgm" data-k="ind" data-al="/">IND</button>
+      <button class="key exe" data-k="exe">EXE</button>
+
+      <button class="key num" data-k="7" data-al="H">7</button>
+      <button class="key num" data-k="8" data-al="I">8</button>
+      <button class="key num" data-k="9" data-al="J">9</button>
+      <button class="key op"  data-k="div">÷</button>
+      <button class="key acc" data-k="del">DEL</button>
+
+      <button class="key num" data-k="4" data-al="E">4</button>
+      <button class="key num" data-k="5" data-al="F">5</button>
+      <button class="key num" data-k="6" data-al="G">6</button>
+      <button class="key op"  data-k="mul">×</button>
+      <button class="key acc" data-k="clr">CLR</button>
+
+      <button class="key num" data-k="1" data-al="B">1</button>
+      <button class="key num" data-k="2" data-al="C">2</button>
+      <button class="key num" data-k="3" data-al="D">3</button>
+      <button class="key op"  data-k="sub">−</button>
+      <button class="key warn" data-k="ac">AC</button>
+
+      <button class="key num" data-k="0" data-al="A">0</button>
+      <button class="key num" data-k="dot" data-al="K">.</button>
+      <button class="key fn"  data-k="sign" data-al="L">+/−</button>
+      <button class="key op"  data-k="add">+</button>
+      <button class="key op"  data-k="eq">=</button>
+    </div>
+  </div>
+
+  <!-- ================= 面板 ================= -->
+  <div class="panel">
+    <div class="card">
+      <h2>CASIO FX-603P 模擬器</h2>
+      <p>1990 年 Casio 可程式電卓旗艦的網頁復刻：<b>keystroke programming</b>（按鍵即程式步）、<b>P0–P19</b> 程式區、<b>LBL0–L9</b> 區域標籤、<b>DSZ/ISZ</b> 迴圈、<b>IND</b> 間接定址、<b>110</b> 個記憶暫存器。<b>你寫的程式會自動存在瀏覽器裡，關掉瀏覽器再開still在。</b></p>
+      <div class="grid2">
+        <div class="stat"><b>MODE</b><span id="s-mode">RUN</span></div>
+        <div class="stat"><b>AREA</b><span id="s-area">P0</span></div>
+        <div class="stat"><b>STEP</b><span id="s-step">0</span></div>
+        <div class="stat"><b>X</b><span id="s-x">0</span></div>
+      </div>
+      <p class="warn">狀態：<b id="s-save">—</b></p>
+    </div>
+
+    <div class="card">
+      <h2>使用者程式庫（存 / 載 / 匯入 / 匯出）</h2>
+      <div class="row">
+        <input type="text" id="lib-name" placeholder="程式名稱，例如 階乘 n!" style="flex:1;min-width:140px">
+        <button class="btn pri" id="btn-lib-save">儲存目前全部程式</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="btn-export-json">匯出備份 (JSON)</button>
+        <button class="btn" id="btn-export-txt">匯出程式清單 (TXT)</button>
+        <button class="btn" id="btn-import">匯入 JSON</button>
+        <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        <button class="btn dan" id="btn-clear-all">清除全部程式</button>
+      </div>
+      <div id="lib-list"></div>
+      <p class="warn">自動儲存：任何程式／記憶體變更都會立即寫入 <code>localStorage</code>（瀏覽器關閉後仍在）。程式庫是具名快照，可反覆載入。換電腦請用「匯出備份 JSON」。</p>
+    </div>
+
+    <div class="card">
+      <h2>程式區塊</h2>
+      <div class="pgrid" id="pgrid"></div>
+      <pre class="list" id="listing">（尚無程式步）</pre>
+      <div class="row">
+        <button class="btn" id="btn-copy-list">複製清單</button>
+        <button class="btn" id="btn-clear-area">清空此區塊</button>
+        <span class="warn">總步數 <b id="s-total">0</b> / 6144</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>範例程式（一鍵載入）</h2>
+      <div class="row" id="samples"></div>
+      <p class="warn">載入後：切到 <b>MODE 0 (RUN)</b> → 輸入數字 → 按 <b>P</b> 再按區塊編號（例如 P0）即可執行。程式內用 <code>HLT</code> 等輸入，按 <b>EXE</b> 繼續。</p>
+    </div>
+
+    <div class="card">
+      <h2>操作速查</h2>
+      <h3>模式</h3>
+      <ul>
+        <li><b>MODE 0 = RUN</b>：計算與執行程式（輸入數字後按 <kbd>P</kbd>+區塊編號）。</li>
+        <li><b>MODE 1 = WRT</b>：錄製程式；之後每個按鍵都會變成一步存進目前區塊。</li>
+        <li><b>MODE 2 = EDIT</b>：選擇程式區塊（也可在任何模式用面板上的 P0–P19 按鈕）。</li>
+      </ul>
+      <h3>程式常用</h3>
+      <ul>
+        <li><code>STO n</code>／<code>RCL n</code>：存／取記憶體 M00–M109（按 STO 後輸入 1–3 位數字）。</li>
+        <li><code>LBL n</code>／<code>GOTO n</code>／<code>GSB n</code>／<code>RTN</code>：區域標籤 0–9 與副程式。</li>
+        <li><code>DSZ r</code>：M(r) 減 1，<b>若為 0 就跳過下一步</b>——慣用法是後面接 <code>GOTO n</code> 形成迴圈；省略 r 時預設 M00（對應原廠手冊的階乘範例寫法）。</li>
+        <li><code>ISZ r</code>：加 1，若為 0 則跳過下一步。</li>
+        <li><code>IND</code>：下一個記憶體／跳躍步驟改用「間接」定址（M(r) 的內容當位址）。</li>
+        <li><code>HLT</code>：暫停等輸入，按 <b>EXE</b> 繼續。</li>
+        <li><code>ALPHA</code>：輸入文字（鍵面右上角小字就是 ALPHA 字元），會顯示在第一行。</li>
+        <li><code>=</code>：完成運算；程式跑到區塊結尾會自動停止。</li>
+      </ul>
+      <h3>2nd / INV 第二功能</h3>
+      <ul>
+        <li><b>INV</b> + sin/cos/tan = 反三角；INV + log/ln = 10^x／e^x。</li>
+        <li><b>2nd</b> + <kbd>7</kbd>/<kbd>8</kbd>/<kbd>9</kbd> = DEG／RAD／GRA；2nd + <kbd>.</kbd> = FIX（小數位循環）；2nd + <kbd>EXP</kbd> = SCI；2nd + x²=ABS、√=INT、1/x=FRAC、n!=RND。</li>
+      </ul>
+      <p class="warn">本機沒有接實體鍵盤：所有輸入都用畫面上的按鍵（避免與面板輸入框衝突）。</p>
+    </div>
+
+    <div class="card">
+      <h2>實作說明與已知差異</h2>
+      <ul>
+        <li><b>核心忠實</b>：keystroke 錄製與合併（數字字面值／STO+位址／LBL+編號各算一步）、P0–P19、LBL0–L9、DSZ 跳過下一步的語意、HLT+EXE 續跑、IND 間接定址、ALPHA 文字輸出到第一行——都依 FX-603P 公開資料的程式模型實作。</li>
+        <li><b>鍵位與 ALPHA 對應是重建</b>：我沒有逐鍵對照的原廠手冊圖，鍵盤排列與「哪個鍵在 ALPHA 下打出哪個字元」是照功能合理配置，鍵面右上角小字即實際對應。</li>
+        <li><b>MODE 只實作 0/1/2</b>（RUN／WRT／程式區選擇）；統計、BASE-N、複數、積分等模式未實作。</li>
+        <li><b>顯示</b>：主顯示 2 行 × 16 字元 5×7 點矩陣、右側 4 位步數顯示、20 格狀態指示——皆為點矩陣重繪；步數顯示實機是 7 段式，這裡沿用點矩陣。</li>
+        <li><b>精度</b>：內部用 JS double，顯示端做 12 位有效數字與 ±99 指數格式化（實機為 12 位尾數）。</li>
+        <li><b>儲存</b>：程式與記憶體存在 <code>localStorage</code>（同一瀏覽器／同一網域）；跨裝置請用 JSON 匯出／匯入。無痕模式或清除網站資料會一併清掉。</li>
+      </ul>
+      <p class="warn">參考：
+        <a href="https://en.wikipedia.org/wiki/Casio_FX-603P" target="_blank" rel="noreferrer">Wikipedia: Casio FX-603P</a> ·
+        <a href="https://en.wikipedia.org/wiki/Casio_FX-602P_series" target="_blank" rel="noreferrer">FX-602P series</a> ·
+        <a href="http://fx-602p.krischik.com/index.php/FX-603P/HomePage" target="_blank" rel="noreferrer">FX-603P 資源站（含 token list）</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1. 5×7 點矩陣字型（每個字元 7 列 × 5 行，'1' = 亮）
+   ========================================================= */
+var FONT = {
+ " ":"00000/00000/00000/00000/00000/00000/00000",
+ "0":"01110/10001/10011/10101/11001/10001/01110",
+ "1":"00100/01100/00100/00100/00100/00100/01110",
+ "2":"01110/10001/00001/00010/00100/01000/11111",
+ "3":"11111/00010/00100/00010/00001/10001/01110",
+ "4":"00010/00110/01010/10010/11111/00010/00010",
+ "5":"11111/10000/11110/00001/00001/10001/01110",
+ "6":"00110/01000/10000/11110/10001/10001/01110",
+ "7":"11111/00001/00010/00100/01000/01000/01000",
+ "8":"01110/10001/10001/01110/10001/10001/01110",
+ "9":"01110/10001/10001/01111/00001/00010/01100",
+ "A":"01110/10001/10001/11111/10001/10001/10001",
+ "B":"11110/10001/10001/11110/10001/10001/11110",
+ "C":"01110/10001/10000/10000/10000/10001/01110",
+ "D":"11110/10001/10001/10001/10001/10001/11110",
+ "E":"11111/10000/10000/11110/10000/10000/11111",
+ "F":"11111/10000/10000/11110/10000/10000/10000",
+ "G":"01110/10001/10000/10111/10001/10001/01111",
+ "H":"10001/10001/10001/11111/10001/10001/10001",
+ "I":"01110/00100/00100/00100/00100/00100/01110",
+ "J":"00111/00010/00010/00010/00010/10010/01100",
+ "K":"10001/10010/10100/11000/10100/10010/10001",
+ "L":"10000/10000/10000/10000/10000/10000/11111",
+ "M":"10001/11011/10101/10101/10001/10001/10001",
+ "N":"10001/10001/11001/10101/10011/10001/10001",
+ "O":"01110/10001/10001/10001/10001/10001/01110",
+ "P":"11110/10001/10001/11110/10000/10000/10000",
+ "Q":"01110/10001/10001/10001/10101/10010/01101",
+ "R":"11110/10001/10001/11110/10100/10010/10001",
+ "S":"01111/10000/10000/01110/00001/00001/11110",
+ "T":"11111/00100/00100/00100/00100/00100/00100",
+ "U":"10001/10001/10001/10001/10001/10001/01110",
+ "V":"10001/10001/10001/10001/10001/01010/00100",
+ "W":"10001/10001/10001/10101/10101/11011/10001",
+ "X":"10001/10001/01010/00100/01010/10001/10001",
+ "Y":"10001/10001/01010/00100/00100/00100/00100",
+ "Z":"11111/00001/00010/00100/01000/10000/11111",
+ "+":"00000/00100/00100/11111/00100/00100/00000",
+ "-":"00000/00000/00000/11111/00000/00000/00000",
+ "*":"00000/10101/01110/11111/01110/10101/00000",
+ "/":"00001/00010/00010/00100/01000/01000/10000",
+ "=":"00000/00000/11111/00000/11111/00000/00000",
+ ".":"00000/00000/00000/00000/00000/01100/01100",
+ ",":"00000/00000/00000/00000/00110/00100/01000",
+ ":":"00000/01100/01100/00000/01100/01100/00000",
+ ";":"00000/01100/01100/00000/01100/00100/01000",
+ "(":"00010/00100/01000/01000/01000/00100/00010",
+ ")":"01000/00100/00010/00010/00010/00100/01000",
+ "[":"01110/01000/01000/01000/01000/01000/01110",
+ "]":"01110/00010/00010/00010/00010/00010/01110",
+ "<":"00010/00100/01000/10000/01000/00100/00010",
+ ">":"01000/00100/00010/00001/00010/00100/01000",
+ "!":"00100/00100/00100/00100/00100/00000/00100",
+ "?":"01110/10001/00001/00110/00100/00000/00100",
+ "%":"11001/11010/00010/00100/01000/01011/10011",
+ "^":"00100/01010/10001/00000/00000/00000/00000",
+ "~":"00000/01000/10101/00010/00000/00000/00000",
+ "#":"01010/11111/01010/01010/11111/01010/00000",
+ "$":"00100/01111/10100/01110/00101/11110/00100",
+ "&":"01100/10010/10100/01000/10101/10010/01101",
+ "'":"00100/00100/00000/00000/00000/00000/00000",
+ "\"":"01010/01010/00000/00000/00000/00000/00000",
+ "@":"01110/10001/10111/10101/10111/10000/01110",
+ "_":"00000/00000/00000/00000/00000/00000/11111",
+ "|":"00100/00100/00100/00100/00100/00100/00100",
+ "°":"01100/10010/01100/00000/00000/00000/00000",
+ "√":"00001/00010/00100/11111/10100/10010/10001",
+ "×":"00000/10001/01010/00100/01010/10001/00000",
+ "÷":"00000/00100/00000/11111/00000/00100/00000",
+ "→":"00000/00100/00010/11111/00010/00100/00000",
+ "←":"00000/00100/01000/11111/01000/00100/00000",
+ "π":"01110/10001/10001/11111/10001/10001/10001"
+};
+var FONT_CACHE = {};
+function glyph(ch){
+  var k = String(ch || " ");
+  if (FONT_CACHE[k]) return FONT_CACHE[k];
+  var g = FONT[k] || FONT[k.toUpperCase()] || FONT["?"];
+  var rows = g.split("/");
+  FONT_CACHE[k] = rows;
+  return rows;
+}
+function hasGlyph(ch){ return !!FONT[ch] || !!FONT[String(ch).toUpperCase()]; }
+
+/* =========================================================
+   2. 顯示器（點矩陣）
+   ========================================================= */
+function makeDots(cells, parent, cls){
+  var line = document.createElement("div");
+  line.className = cls || "dotline";
+  var out = [];
+  for (var i=0;i<cells;i++){
+    var c = document.createElement("div");
+    c.className = "dcell";
+    var dots = [];
+    for (var k=0;k<35;k++){ var d = document.createElement("i"); c.appendChild(d); dots.push(d); }
+    line.appendChild(c);
+    out.push(dots);
+  }
+  parent.appendChild(line);
+  return { el: line, cells: out, text: null };
+}
+function drawDots(obj, text){
+  text = String(text == null ? "" : text);
+  if (obj.text === text) return;                  // 只在內容變動時重畫
+  obj.text = text;
+  for (var i=0;i<obj.cells.length;i++){
+    var g = glyph(text.charAt(i) || " ");
+    var dots = obj.cells[i];
+    for (var r=0;r<7;r++){
+      var row = g[r] || "00000";
+      for (var q=0;q<5;q++) dots[r*5+q].classList.toggle("on", row.charAt(q) === "1");
+    }
+  }
+}
+var lcdEl = document.getElementById("lcd");
+var LINE1 = makeDots(16, lcdEl);
+var LINE2 = makeDots(16, lcdEl);
+var stepEl = document.getElementById("stepdisp");
+var STEP = makeDots(4, stepEl, "dotline s4");
+var indEl = document.getElementById("indicators");
+var IND_NAMES = ["RUN","WRT","EDIT","PGM","HLT","ALPHA","IND","DEG","RAD","GRA","FIX","SCI","MEM","M+","ERR","2nd","INV","P>","GSB","DEL"];
+var IND_MAP = {};
+IND_NAMES.forEach(function(n){
+  var s = document.createElement("span");
+  s.className = "ind";
+  s.textContent = n;
+  indEl.appendChild(s);
+  IND_MAP[n] = s;
+});
+
+/* =========================================================
+   3. 機器狀態
+   ========================================================= */
+var AREAS = [];
+for (var ai=0; ai<20; ai++) AREAS.push("P"+ai);
+
+var M = {
+  mode: 0,             // 0=RUN 1=WRT 2=EDIT
+  area: "P0",
+  progs: {},           // { "P0":[step,...] }
+  regs: new Array(110).fill(0),
+  x: 0, y: 0, z: 0,
+  entry: null,         // 正在輸入的數字字串（null = 沒在輸入）
+  pending: null,       // {op, left}
+  stack: [],           // 運算式運算子堆疊
+  vals: [],            // 運算式數值堆疊
+  xPushed: false,      // 目前的 X 是否已壓入 vals
+  deg: true, rad:false, gra:false,
+  fix: -1, sci: -1,
+  alpha: false, alphaLine: "",
+  ind: false, second: false, inv: false,
+  prog: { running:false, area:null, pc:0, ret:[], paused:false, gsb:[], pendingStep:null },
+  lastStep: null,      // 錄製中的暫存步（等待位址）
+  err: false,
+  mem: 0,
+  dirty: false
+};
+AREAS.forEach(function(a){ M.progs[a] = []; });
+
+function area(){ return M.progs[M.area] || (M.progs[M.area] = []); }
+function totalSteps(){
+  var n = 0; for (var k in M.progs) n += M.progs[k].length; return n;
+}
+function clrErr(){ M.err = false; }
+
+/* =========================================================
+   4. 數字格式化（12 位有效數字、±99 指數）
+   ========================================================= */
+function fmtNum(v){
+  if (typeof v !== "number" || !isFinite(v)) return "E";
+  if (v === 0) return M.fix >= 0 ? (0).toFixed(Math.min(M.fix,9)) : "0";
+  var a = Math.abs(v);
+  var needSci = (M.sci >= 0) || a >= 1e10 || a < 1e-9;
+  if (needSci){
+    var e = Math.floor(Math.log10(a));
+    var m = v / Math.pow(10, e);
+    var md = M.sci >= 0 ? Math.min(M.sci, 9) : 9;
+    var ms = m.toFixed(md);
+    if (M.sci < 0) ms = ms.replace(/0+$/,"").replace(/\.$/,"");
+    if (ms.length > 12) ms = parseFloat(ms).toPrecision(10);
+    return ms + " " + (e < 0 ? "-" : "+") + String(Math.abs(e)).padStart(2,"0");
+  }
+  var s;
+  if (M.fix >= 0) s = v.toFixed(Math.min(M.fix, 9));
+  else {
+    s = String(parseFloat(v.toPrecision(12)));
+    if (s.indexOf("e") >= 0) return fmtSci(v);
+  }
+  if (s.length > 16) s = String(parseFloat(v.toPrecision(10)));
+  return s;
+}
+function fmtSci(v){
+  var a = Math.abs(v), e = Math.floor(Math.log10(a)), m = v / Math.pow(10,e);
+  var ms = parseFloat(m.toPrecision(10)).toString();
+  return ms + " " + (e<0?"-":"+") + String(Math.abs(e)).padStart(2,"0");
+}
+function curX(){
+  if (M.entry !== null) return parseFloat(M.entry) || 0;
+  return M.x;
+}
+function setX(v){
+  M.x = v; M.entry = null; M.xPushed = false; M.dirty = true;
+}
+function entryText(){
+  return M.entry === null ? fmtNum(M.x) : (M.entry === "" ? "0" : M.entry);
+}
+
+/* =========================================================
+   5. 計算引擎（Casio 式 infix：值堆疊 + 運算子堆疊 + 括號）
+   ========================================================= */
+function prec(op){ return op === "^" ? 3 : ((op === "*" || op === "/") ? 2 : 1); }
+function applyOp(op, a, b){
+  switch(op){
+    case "+": return a + b;
+    case "-": return a - b;
+    case "*": return a * b;
+    case "/": return b === 0 ? (M.err = true, NaN) : a / b;
+    case "^": return Math.pow(a, b);
+  }
+  return b;
+}
+function reduceTop(){
+  var op = M.stack.pop();
+  /* 缺運算元時把堆疊頂端複製一份（對應 Casio 的「5 + =」→ 10 行為） */
+  if (M.vals.length < 2){
+    M.vals.push(M.vals.length === 1 ? M.vals[0] : 0);
+  }
+  var b = M.vals.pop(), a = M.vals.pop();
+  M.vals.push(applyOp(op, a, b));
+}
+/* 把目前的 X 壓入值堆疊（一個運算元只能壓一次） */
+function pushX(){
+  M.vals.push(curX());
+  M.entry = null;
+  M.xPushed = true;
+  if (M.vals.length) M.x = M.vals[M.vals.length - 1];
+}
+function binOp(op){
+  if (!M.xPushed) pushX();
+  while (M.stack.length && M.stack[M.stack.length-1] !== "(" &&
+         prec(M.stack[M.stack.length-1]) >= prec(op)) reduceTop();
+  M.stack.push(op);
+  if (M.vals.length) M.x = M.vals[M.vals.length-1];
+  M.dirty = true;
+}
+function opParen(open){
+  if (open){
+    if (!M.xPushed && (M.vals.length || M.entry !== null)){
+      pushX();
+      M.stack.push("*");                      // 隱含乘法：2(3+4)
+    }
+    M.stack.push("(");
+    M.entry = null; M.x = 0; M.xPushed = false;
+  } else {
+    if (!M.xPushed) pushX();
+    while (M.stack.length && M.stack[M.stack.length-1] !== "(") reduceTop();
+    if (M.stack.length) M.stack.pop();
+    M.x = M.vals.length ? M.vals[M.vals.length-1] : 0;
+    M.xPushed = true;
+  }
+  M.dirty = true;
+}
+function opEquals(){
+  if (!M.xPushed) pushX();
+  while (M.stack.length) reduceTop();
+  var r = M.vals.length ? M.vals.pop() : curX();
+  M.vals = [];
+  M.x = r; M.entry = null; M.xPushed = false;
+  M.dirty = true;
+  return r;
+}
+function unary(fn){
+  var v = curX(), r;
+  switch(fn){
+    case "sin": r = Math.sin(toRad(v)); break;
+    case "cos": r = Math.cos(toRad(v)); break;
+    case "tan": r = Math.tan(toRad(v)); break;
+    case "asin": r = fromRad(Math.asin(v)); break;
+    case "acos": r = fromRad(Math.acos(v)); break;
+    case "atan": r = fromRad(Math.atan(v)); break;
+    case "log": r = Math.log10(v); break;
+    case "ln": r = Math.log(v); break;
+    case "10x": r = Math.pow(10, v); break;
+    case "ex": r = Math.exp(v); break;
+    case "x2": r = v * v; break;
+    case "sqrt": r = v < 0 ? (M.err = true, NaN) : Math.sqrt(v); break;
+    case "invx": r = v === 0 ? (M.err = true, NaN) : 1 / v; break;
+    case "fact": r = factorial(v); break;
+    case "pi": r = Math.PI; break;
+    case "abs": r = Math.abs(v); break;
+    case "int": r = Math.trunc(v); break;
+    case "frac": r = v - Math.trunc(v); break;
+    case "rnd": r = Math.round(v * 1e9) / 1e9; break;
+    case "sign": r = -v; break;
+    case "pct": r = v / 100; break;
+  }
+  if (r === undefined) r = v;
+  if (!isFinite(r)) M.err = true;
+  setX(r);
+  return r;
+}
+function factorial(v){
+  if (v < 0 || v !== Math.floor(v) || v > 69){ M.err = true; return NaN; }
+  var r = 1; for (var i=2;i<=v;i++) r *= i; return r;
+}
+function toRad(v){ return M.deg ? v * Math.PI / 180 : (M.gra ? v * Math.PI / 200 : v); }
+function fromRad(v){ return M.deg ? v * 180 / Math.PI : (M.gra ? v * 200 / Math.PI : v); }
+
+/* =========================================================
+   6. 記憶體
+   ========================================================= */
+function regIndex(n){ return ((n % 110) + 110) % 110; }
+function sto(n, ind){
+  var idx = ind ? regIndex(M.regs[regIndex(n)] | 0) : regIndex(n);
+  M.regs[idx] = curX();
+  setX(M.regs[idx]);
+  M.dirty = true;
+}
+function rcl(n, ind){
+  var idx = ind ? regIndex(M.regs[regIndex(n)] | 0) : regIndex(n);
+  setX(M.regs[idx]);
+  M.dirty = true;
+}
+function memAdd(n, sign){
+  var idx = regIndex(n);
+  M.regs[idx] += sign * curX();
+  setX(M.regs[idx]);
+  M.dirty = true;
+}
+
+/* =========================================================
+   7. 輸入緩衝、清除、刪除
+   ========================================================= */
+function inputDigit(ch){
+  if (M.entry === null) M.entry = "";
+  if (ch === "." && M.entry.indexOf(".") >= 0) return;
+  var head = M.entry.split("E")[0].replace("-", "").replace(".", "");
+  if (head.length >= 12) return;
+  M.entry += ch;
+  M.x = parseFloat(M.entry);
+  if (isNaN(M.x)) M.x = 0;
+  M.xPushed = false;
+  M.dirty = true;
+}
+function entryExp(){
+  if (M.entry === null) M.entry = "";
+  if (M.entry.indexOf("E") >= 0) return;
+  M.entry += "E";
+  M.dirty = true;
+}
+function entrySign(){
+  if (M.entry === null || M.entry === "") M.entry = "0";
+  if (M.entry.charAt(0) === "-") M.entry = M.entry.slice(1);
+  else M.entry = "-" + M.entry;
+  M.x = parseFloat(M.entry) || 0;
+  M.xPushed = false;
+  M.dirty = true;
+}
+function delKey(){
+  if (M.mode === 1 && !M.prog.running){
+    var p = M.lastStep;
+    if (p && p._kind === "literal"){
+      p._src = p._src.slice(0, -1);
+      p.v = parseFloat(p._src) || 0;
+      if (p._src === ""){ area().pop(); M.lastStep = null; }
+      M.dirty = true; return;
+    }
+    if (p){ area().pop(); M.lastStep = null; M.dirty = true; return; }
+    if (area().length){ area().pop(); M.dirty = true; }
+    return;
+  }
+  if (M.entry !== null){
+    M.entry = M.entry.slice(0, -1);
+    if (M.entry === "" || M.entry === "-"){ M.entry = null; M.x = 0; }
+    else M.x = parseFloat(M.entry) || 0;
+    M.xPushed = false;
+  }
+  M.dirty = true;
+}
+function clrKey(){
+  M.entry = null; M.x = 0; M.xPushed = false;
+  M.stack = []; M.vals = [];
+  M.lastStep = null;
+  clrErr();
+  M.dirty = true;
+}
+function acKey(){
+  clrKey();
+  M.alphaLine = "";
+  M.alpha = false; M.ind = false; M.second = false; M.inv = false;
+  M.prog.running = false; M.prog.paused = false; M.prog.gsb = []; M.prog.ret = [];
+  M.y = 0; M.z = 0;
+  M.dirty = true;
+}
+
+/* =========================================================
+   8. 程式步的表示與錄製（MODE 1 = WRT）
+   ========================================================= */
+function pad3(n){ return String(n == null ? 0 : n).padStart(3, "0"); }
+function stepLabel(s){
+  if (!s) return "";
+  switch(s.t){
+    case "num":  return "NUM " + s.v;
+    case "op":   return s.v;
+    case "eq":   return "=";
+    case "fn":   return String(s.v).toUpperCase();
+    case "sto":  return "STO " + (s.ind ? "IND " : "") + pad3(s.n);
+    case "rcl":  return "RCL " + (s.ind ? "IND " : "") + pad3(s.n);
+    case "mp":   return "M+ " + pad3(s.n);
+    case "mm":   return "M- " + pad3(s.n);
+    case "lbl":  return "LBL " + s.n;
+    case "goto": return "GOTO " + (s.ind ? "IND " : "") + s.n;
+    case "gsb":  return "GSB " + (s.ind ? "IND " : "") + s.n;
+    case "rtn":  return "RTN";
+    case "call": return s.area;
+    case "hlt":  return "HLT";
+    case "dsz":  return "DSZ " + (s.r == null ? "" : pad3(s.r));
+    case "isz":  return "ISZ " + (s.r == null ? "" : pad3(s.r));
+    case "xym":  return "X<>Y";
+    case "alpha":return "ALPHA " + s.ch;
+    case "fix":  return "FIX " + s.v;
+    case "sci":  return "SCI " + s.v;
+    case "deg":  return "DEG";
+    case "rad":  return "RAD";
+    case "gra":  return "GRA";
+  }
+  return s.t;
+}
+function wrtPush(s){ area().push(s); M.dirty = true; }
+var FN_KEYS = {
+  sin:"sin", cos:"cos", tan:"tan", log:"log", ln:"ln",
+  x2:"x2", sqrt:"sqrt", invx:"invx", fact:"fact",
+  pi:"pi", pct:"pct", sign:"sign"
+};
+/* MODE 1：每個按鍵都變成一步，數字／位址會合併進同一步 */
+function wrtPress(k, v){
+  var p = M.lastStep;
+
+  /* --- 等待中的合併步先處理 --- */
+  if (p && p._kind && p._kind !== "literal"){
+    if (p._kind === "reg"){
+      if (k === "digit"){
+        p.buf += String(v); p.n = parseInt(p.buf, 10) || 0;
+        /* 2 位數就定案，除非是 "10"（可能還要接成 M100-M109） */
+        if (p.buf.length >= 3 || (p.buf.length === 2 && p.buf !== "10")) M.lastStep = null;
+        M.dirty = true; return;
+      }
+      M.lastStep = null;                                  // 位址定案，繼續處理本鍵
+    } else if (p._kind === "loop"){
+      if (k === "digit"){
+        p.buf += String(v); p.r = parseInt(p.buf, 10) || 0;
+        if (p.buf.length >= 2) M.lastStep = null;
+        M.dirty = true; return;
+      }
+      M.lastStep = null;
+    } else if (p._kind === "label"){
+      if (k === "digit"){ p.n = v; M.lastStep = null; M.dirty = true; return; }
+      M.lastStep = null;
+    } else if (p._kind === "mode"){
+      M.lastStep = null;
+      if (k === "digit"){ setMode(v); return; }
+    } else if (p._kind === "area"){
+      if (k === "digit"){
+        p.buf += String(v);
+        var ix = parseInt(p.buf, 10);
+        if (p.buf.length >= 2 || ix > 1){
+          if (ix >= 0 && ix < 20){ M.area = "P" + ix; M.dirty = true; }
+          M.lastStep = null;
+        }
+        return;
+      }
+      M.lastStep = null;
+    } else {
+      M.lastStep = null;
+    }
+  }
+
+  /* --- 數字字面值合併成一步 --- */
+  if (k === "digit" || k === "dot" || k === "exp" || k === "sign"){
+    var a = area(), last = a[a.length - 1];
+    if (last && last.t === "num" && !last._closed && last === M.lastStep){ /* 續用 */ }
+    else if (last && last.t === "num" && !last._closed && M.lastStep === null){ /* 續用 */ }
+    else {
+      if (k === "sign" && last && last.t === "num" && !last._closed){
+        last.v = -last.v; last._src = "-" + last._src; M.lastStep = last; return;
+      }
+      last = { t:"num", v:0, _src:"", _closed:false };
+      a.push(last); M.dirty = true;
+    }
+    if (k === "sign"){ last.v = -last.v; last._src = "-" + last._src; }
+    else last._src += (k === "digit" ? String(v) : (k === "dot" ? "." : "E"));
+    last.v = parseFloat(last._src) || 0;
+    M.lastStep = last;
+    M.entry = null; M.x = last.v; M.xPushed = false;
+    M.dirty = true;
+    return;
+  }
+
+  /* --- 其他鍵：先結束字面值 --- */
+  if (M.lastStep && M.lastStep._kind === "literal"){ M.lastStep._closed = true; M.lastStep = null; }
+  var tail = area()[area().length - 1];
+  if (tail && tail.t === "num") tail._closed = true;
+
+  var ind = M.ind; M.ind = false;
+  switch(k){
+    case "sto": case "rcl": case "mplus": case "mminus":
+      M.lastStep = { t: ({sto:"sto",rcl:"rcl",mplus:"mp",mminus:"mm"})[k], n:0, ind:ind, buf:"", _kind:"reg" };
+      wrtPush(M.lastStep); return;
+    case "dsz": case "isz":
+      M.lastStep = { t:k, r:null, buf:"", _kind:"loop" };
+      wrtPush(M.lastStep); return;
+    case "lbl": case "goto": case "gsb":
+      M.lastStep = { t:k, n:0, ind:ind, _kind:"label" };
+      wrtPush(M.lastStep); return;
+    case "pk":   M.lastStep = { _kind:"area", buf:"" }; return;
+    case "mode": M.lastStep = { _kind:"mode" }; return;
+    case "add": case "sub": case "mul": case "div":
+      wrtPush({ t:"op", v: ({add:"+",sub:"-",mul:"*",div:"/"})[k] }); return;
+    case "xpy":  wrtPush({ t:"op", v:"^" }); return;
+    case "lp":   wrtPush({ t:"op", v:"(" }); return;
+    case "rp":   wrtPush({ t:"op", v:")" }); return;
+    case "eq": case "exe": wrtPush({ t:"eq" }); return;
+    case "rtn":  wrtPush({ t:"rtn" }); return;
+    case "hlt":  wrtPush({ t:"hlt" }); return;
+    case "xym":  wrtPush({ t:"xym" }); return;
+    case "del":  delKey(); return;
+    case "clr":  clrKey(); return;
+    case "ac":   acKey(); return;
+    case "on": case "2nd": case "inv": return;
+    case "ind":  M.ind = !M.ind; M.dirty = true; return;
+  }
+  if (FN_KEYS[k]){ wrtPush({ t:"fn", v:FN_KEYS[k] }); return; }
+}
+
+/* =========================================================
+   9. 程式執行
+   ========================================================= */
+function findLabel(arr, n){
+  for (var i=0;i<arr.length;i++){
+    var s = arr[i];
+    if (s.t === "lbl" && s.n === n) return i;
+  }
+  return -1;
+}
+function startArea(name, fromPc){
+  M.stack = []; M.vals = []; M.xPushed = false;
+  M.prog.running = true;
+  M.prog.area = name;
+  M.prog.pc = fromPc || 0;
+  M.prog.paused = false;
+  M.prog.gsb = [];
+  M.prog.ret = [];
+  runSteps();
+}
+function runSteps(){
+  var guard = 0;
+  while (M.prog.running && !M.prog.paused){
+    if (++guard > 200000){ M.err = true; M.prog.running = false; break; }
+    var arr = M.progs[M.prog.area];
+    if (!arr){ M.err = true; M.prog.running = false; break; }
+    if (M.prog.pc >= arr.length){
+      if (M.prog.ret.length){                       // 被呼叫的程式區跑完 → 回到呼叫者
+        var back = M.prog.ret.pop();
+        M.prog.area = back.area; M.prog.pc = back.pc;
+        continue;
+      }
+      endProgram(); break;
+    }
+    var s = arr[M.prog.pc];
+    M.prog.pc++;
+    var skip = execStep(s, arr);
+    if (skip) M.prog.pc++;
+  }
+}
+function endProgram(){
+  M.prog.running = false;
+  M.prog.paused = false;
+  M.prog.area = null;
+  M.prog.gsb = [];
+  /* 不主動 flush 未完成的運算：程式跑到結尾就停在目前的 X */
+  M.entry = null;
+  M.dirty = true;
+}
+function execStep(s, arr){
+  switch(s.t){
+    case "num":  setX(s.v); return false;
+    case "op":
+      if (s.v === "(") { opParen(true); return false; }
+      if (s.v === ")") { opParen(false); return false; }
+      binOp(s.v); return false;
+    case "eq":   opEquals(); return false;
+    case "fn":   unary(s.v); return false;
+    case "sto":  sto(s.n, s.ind); return false;
+    case "rcl":  rcl(s.n, s.ind); return false;
+    case "mp":   memAdd(s.n, 1); return false;
+    case "mm":   memAdd(s.n, -1); return false;
+    case "lbl":  return false;
+    case "goto": {
+      var n = s.ind ? (M.regs[regIndex(s.n)] | 0) : s.n;
+      var i = findLabel(arr, n);
+      if (i < 0){ M.err = true; endProgram(); return false; }
+      M.prog.pc = i; return false;
+    }
+    case "gsb": {
+      var n2 = s.ind ? (M.regs[regIndex(s.n)] | 0) : s.n;
+      var i2 = findLabel(arr, n2);
+      if (i2 < 0){ M.err = true; endProgram(); return false; }
+      M.prog.gsb.push(M.prog.pc);
+      M.prog.pc = i2; return false;
+    }
+    case "rtn":
+      if (M.prog.gsb.length){ M.prog.pc = M.prog.gsb.pop(); return false; }
+      endProgram(); return false;
+    case "call": {
+      if (!M.progs[s.area]){ M.err = true; return false; }
+      M.prog.ret.push({ area: M.prog.area, pc: M.prog.pc });
+      M.prog.area = s.area; M.prog.pc = 0;
+      return false;
+    }
+    case "hlt":
+      if (M.entry !== null && M.entry !== "") M.x = parseFloat(M.entry) || 0;
+      M.entry = null; M.xPushed = false;
+      M.prog.paused = true;
+      return false;
+    case "dsz": {
+      var r = (s.r === null || s.r === undefined) ? 0 : s.r;
+      M.regs[regIndex(r)] -= 1;
+      M.dirty = true;
+      return M.regs[regIndex(r)] === 0;
+    }
+    case "isz": {
+      var r2 = (s.r === null || s.r === undefined) ? 0 : s.r;
+      M.regs[regIndex(r2)] += 1;
+      M.dirty = true;
+      return M.regs[regIndex(r2)] === 0;
+    }
+    case "xym":  var t = M.x; M.x = M.y; M.y = t; return false;
+    case "alpha": if (M.alphaLine.length < 16) M.alphaLine += s.ch; return false;
+    case "deg":  M.deg = true; M.rad = false; M.gra = false; return false;
+    case "rad":  M.deg = false; M.rad = true; M.gra = false; return false;
+    case "gra":  M.deg = false; M.rad = false; M.gra = true; return false;
+    case "fix":  M.fix = s.v; return false;
+    case "sci":  M.sci = s.v; return false;
+  }
+  return false;
+}
+function resumeProgram(){
+  if (!M.prog.running) return;
+  if (M.entry !== null && M.entry !== "") M.x = parseFloat(M.entry) || 0;
+  M.entry = null; M.xPushed = false;
+  M.prog.paused = false;
+  runSteps();
+}
+function callArea(name){
+  if (!M.progs[name]) return;
+  opEquals();
+  M.alphaLine = "";
+  startArea(name, 0);
+}
+
+/* =========================================================
+   10. 模式、第二功能、ALPHA 字元
+   ========================================================= */
+function setMode(n){
+  if (n < 0 || n > 2) return;
+  M.mode = n;
+  M.lastStep = null;
+  M.entry = null;
+  M.dirty = true;
+}
+function secondAction(k){
+  switch(k){
+    case "7": M.deg = true; M.rad = false; M.gra = false; break;
+    case "8": M.deg = false; M.rad = true; M.gra = false; break;
+    case "9": M.deg = false; M.rad = false; M.gra = true; break;
+    case "dot": M.fix = M.fix >= 9 ? -1 : M.fix + 1; break;
+    case "exp": M.sci = M.sci >= 9 ? -1 : M.sci + 1; break;
+    case "x2": unary("abs"); break;
+    case "sqrt": unary("int"); break;
+    case "invx": unary("frac"); break;
+    case "fact": unary("rnd"); break;
+  }
+  M.second = false;
+  M.dirty = true;
+}
+function invAction(k){
+  switch(k){
+    case "sin": unary("asin"); break;
+    case "cos": unary("acos"); break;
+    case "tan": unary("atan"); break;
+    case "log": unary("10x"); break;
+    case "ln": unary("ex"); break;
+  }
+  M.inv = false;
+  M.dirty = true;
+}
+/* ALPHA 模式下各鍵打出的字元（與鍵面右上角小字一致） */
+var ALPHA_CHAR = {
+  "2nd":"(", "inv":")", "alpha":"=", "mode":";",
+  "sin":"Y", "cos":"Z", "tan":" ", "log":"W", "ln":"X",
+  "x2":"S", "sqrt":"R", "invx":"U", "xpy":"T", "fact":"V",
+  "lp":"M", "rp":"N", "pi":"P", "pct":"Q", "exp":"O",
+  "sto":":", "rcl":"?", "mplus":"\"", "mminus":"'", "xym":"!",
+  "lbl":"$", "goto":"#", "gsb":"%", "rtn":"*",
+  "dsz":"+", "isz":",", "hlt":"-", "ind":"/",
+  "7":"H", "8":"I", "9":"J", "4":"E", "5":"F", "6":"G",
+  "1":"B", "2":"C", "3":"D", "0":"A", "dot":"K", "sign":"L"
+};
+
+/* =========================================================
+   11. 按鍵分派
+   ========================================================= */
+function runAreaSel(n){
+  if (isNaN(n) || n < 0 || n > 19) return;
+  if (M.mode === 1){ M.area = "P" + n; M.dirty = true; }
+  else callArea("P" + n);
+}
+function doReg(p){
+  var n = parseInt(p.buf || "0", 10);
+  if (p.t === "sto") sto(n, p.ind);
+  else if (p.t === "rcl") rcl(n, p.ind);
+  else if (p.t === "mp") memAdd(n, 1);
+  else memAdd(n, -1);
+}
+function doJump(kind, n, ind){
+  var idx = ind ? regIndex(M.regs[regIndex(n)] | 0) : n;
+  var i = findLabel(area(), idx);
+  if (i < 0){ M.err = true; return; }
+  M.prog.area = M.area;
+  M.prog.ret = []; M.prog.gsb = [];
+  M.prog.running = true; M.prog.paused = false;
+  M.prog.pc = (kind === "goto") ? i + 1 : i;
+  runSteps();
+}
+function press(k, v){
+  /* 數字鍵正規化：鍵面 data-k 是 "0".."9"，內部一律當成 "digit" */
+  var rawK = k;
+  if (/^[0-9]$/.test(k)){ v = parseInt(k, 10); k = "digit"; }
+
+  /* ALPHA 模式：先當成字元輸入（要用原始鍵名查表） */
+  if (M.alpha && k !== "alpha"){
+    var ch = ALPHA_CHAR[rawK];
+    if (ch !== undefined){
+      if (M.mode === 1 && !M.prog.running) wrtPush({ t:"alpha", ch:ch });
+      else if (M.alphaLine.length < 16) M.alphaLine += ch;
+      M.dirty = true;
+      return;
+    }
+  }
+  if (k === "alpha"){ M.alpha = !M.alpha; M.dirty = true; return; }
+  if (k === "on"){ if (!M.prog.running) acKey(); return; }
+  if (k === "2nd"){ M.second = !M.second; M.inv = false; M.dirty = true; return; }
+  if (k === "inv"){ M.inv = !M.inv; M.second = false; M.dirty = true; return; }
+  if (M.second){ secondAction(rawK); return; }
+  if (M.inv){ invAction(rawK); return; }
+
+  /* MODE 1：錄製 */
+  if (M.mode === 1 && !M.prog.running){ wrtPress(k, v); return; }
+
+  /* RUN / EDIT：等待中的輸入提示（非數字鍵 = 定案後繼續處理該鍵） */
+  var p = M.lastStep;
+  if (p && p._kind){
+    if (p._kind === "mode"){
+      M.lastStep = null;
+      if (k === "digit"){ setMode(v); return; }
+    } else if (p._kind === "area"){
+      if (k === "digit"){
+        p.buf += String(v);
+        var ix = parseInt(p.buf, 10);
+        if (p.buf.length >= 2 || ix > 1){ M.lastStep = null; runAreaSel(ix); }
+        return;
+      }
+      M.lastStep = null;
+      runAreaSel(parseInt(p.buf || "0", 10));
+    } else if (p._kind === "reg"){
+      if (k === "digit"){
+        p.buf += String(v);
+        if (p.buf.length >= 3 || (p.buf.length === 2 && p.buf !== "10")){ M.lastStep = null; doReg(p); }
+        return;
+      }
+      M.lastStep = null;
+      doReg(p);
+    } else if (p._kind === "jump"){
+      if (k === "digit"){ M.lastStep = null; doJump(p.kind, v, p.ind); return; }
+      M.lastStep = null;
+    }
+  }
+
+  switch(k){
+    case "mode":   M.lastStep = { _kind:"mode" }; M.dirty = true; return;
+    case "pk":     M.lastStep = { _kind:"area", buf:"" }; M.dirty = true; return;
+    case "sto":    M.lastStep = { _kind:"reg", t:"sto", buf:"", ind:M.ind }; M.ind = false; return;
+    case "rcl":    M.lastStep = { _kind:"reg", t:"rcl", buf:"", ind:M.ind }; M.ind = false; return;
+    case "mplus":  M.lastStep = { _kind:"reg", t:"mp", buf:"", ind:false }; return;
+    case "mminus": M.lastStep = { _kind:"reg", t:"mm", buf:"", ind:false }; return;
+    case "goto": case "gsb":
+      M.lastStep = { _kind:"jump", kind:k, ind:M.ind }; M.ind = false; return;
+    case "lbl":    return;
+    case "ind":    M.ind = !M.ind; M.dirty = true; return;
+    case "digit":  inputDigit(String(v)); return;
+    case "dot":    inputDigit("."); return;
+    case "exp":    entryExp(); return;
+    case "sign":   entrySign(); return;
+    case "add": case "sub": case "mul": case "div":
+      binOp({add:"+",sub:"-",mul:"*",div:"/"}[k]); return;
+    case "xpy":    binOp("^"); return;
+    case "lp":     opParen(true); return;
+    case "rp":     opParen(false); return;
+    case "eq": case "exe":
+      if (M.prog.paused){ resumeProgram(); return; }
+      opEquals(); return;
+    case "del":    delKey(); return;
+    case "clr":    clrKey(); return;
+    case "ac":     acKey(); return;
+    case "xym":    var t = M.x; M.x = M.y; M.y = t; M.entry = null; M.xPushed = false; return;
+  }
+  if (FN_KEYS[k]){ unary(FN_KEYS[k]); return; }
+}
+
+/* =========================================================
+   12. 畫面
+   ========================================================= */
+var sMode = document.getElementById("s-mode");
+var sArea = document.getElementById("s-area");
+var sStep = document.getElementById("s-step");
+var sX = document.getElementById("s-x");
+var sSave = document.getElementById("s-save");
+var listingEl = document.getElementById("listing");
+var totalEl = document.getElementById("s-total");
+
+function indOn(name, on){ if (IND_MAP[name]) IND_MAP[name].classList.toggle("on", !!on); }
+function render(){
+  var line1 = "", line2 = "";
+  var stepText = "    ";
+
+  if (M.err){ line1 = "ERROR"; line2 = "  AC  "; }
+  else if (M.mode === 1){
+    var a = area();
+    line1 = M.area + " WRT " + String(a.length).padStart(4,"0");
+    var last = M.lastStep ? (M.lastStep.t.charAt(0) === "_" ? pendingText() : stepLabel(M.lastStep)) :
+               (a.length ? stepLabel(a[a.length-1]) : "(EMPTY)");
+    line2 = last;
+    stepText = String(a.length).padStart(4," ");
+  } else if (M.mode === 2){
+    line1 = "EDIT  P0-P19";
+    line2 = M.area + "  " + area().length + " STEPS";
+    stepText = String(area().length).padStart(4," ");
+  } else {
+    line1 = M.alphaLine;
+    line2 = entryText();
+    stepText = M.prog.running ? String(M.prog.pc).padStart(4," ") : "    ";
+  }
+  drawDots(LINE1, (line1 + "                ").slice(0,16));
+  drawDots(LINE2, (line2 + "                ").slice(0,16));
+  drawDots(STEP, stepText.slice(-4));
+
+  indOn("RUN", M.mode === 0 && !M.prog.running);
+  indOn("WRT", M.mode === 1);
+  indOn("EDIT", M.mode === 2);
+  indOn("PGM", M.prog.running && !M.prog.paused);
+  indOn("HLT", M.prog.paused);
+  indOn("ALPHA", M.alpha);
+  indOn("IND", M.ind);
+  indOn("DEG", M.deg); indOn("RAD", M.rad); indOn("GRA", M.gra);
+  indOn("FIX", M.fix >= 0); indOn("SCI", M.sci >= 0);
+  indOn("MEM", savedOk);
+  indOn("ERR", M.err);
+  indOn("2nd", M.second); indOn("INV", M.inv);
+  indOn("GSB", M.prog.gsb && M.prog.gsb.length > 0);
+
+  sMode.textContent = ["RUN","WRT","EDIT"][M.mode];
+  sArea.textContent = M.area;
+  sStep.textContent = String(area().length);
+  sX.textContent = fmtNum(curX());
+  totalEl.textContent = String(totalSteps());
+}
+function pendingText(){
+  var s = M.lastStep; if (!s) return "";
+  switch(s.t){
+    case "_stoNum": return "STO " + (s.buf || "_");
+    case "_rclNum": return "RCL " + (s.buf || "_");
+    case "_mpNum":  return "M+ " + (s.buf || "_");
+    case "_mmNum":  return "M- " + (s.buf || "_");
+    case "_jumpNum":return s.kind.toUpperCase() + " " + (s.n == null ? "_" : s.n);
+    case "_modeNum":return "MODE _";
+    case "_areaNum":return "P" + (s.buf || "_");
+  }
+  return "";
+}
+
+/* =========================================================
+   13. 持久化（localStorage）+ 程式庫
+   ========================================================= */
+var LS_STATE = "fx603p.state.v1";
+var LS_LIB   = "fx603p.library.v1";
+var savedOk = false;
+
+function snapshot(){
+  return {
+    v: 1,
+    mode: M.mode, area: M.area,
+    progs: M.progs, regs: M.regs,
+    deg: M.deg, rad: M.rad, gra: M.gra, fix: M.fix, sci: M.sci,
+    alphaLine: M.alphaLine
+  };
+}
+function restore(data){
+  if (!data || typeof data !== "object") return false;
+  M.mode = (data.mode >= 0 && data.mode <= 2) ? data.mode : 0;
+  M.area = AREAS.indexOf(data.area) >= 0 ? data.area : "P0";
+  M.progs = {};
+  AREAS.forEach(function(a){ M.progs[a] = []; });
+  if (data.progs) for (var k in data.progs){
+    if (AREAS.indexOf(k) >= 0 && Array.isArray(data.progs[k])) M.progs[k] = data.progs[k];
+  }
+  M.regs = new Array(110).fill(0);
+  if (Array.isArray(data.regs)) for (var i=0;i<Math.min(110, data.regs.length);i++){
+    var v = Number(data.regs[i]); M.regs[i] = isFinite(v) ? v : 0;
+  }
+  M.deg = !!data.deg; M.rad = !!data.rad; M.gra = !!data.gra;
+  M.fix = (typeof data.fix === "number") ? data.fix : -1;
+  M.sci = (typeof data.sci === "number") ? data.sci : -1;
+  M.alphaLine = typeof data.alphaLine === "string" ? data.alphaLine.slice(0,16) : "";
+  /* 暫存運算狀態一律重置 */
+  M.stack = []; M.vals = []; M.xPushed = false;
+  M.entry = null; M.x = 0; M.lastStep = null; M.err = false;
+  M.dirty = true;
+  return true;
+}
+var saveTimer = null;
+function autosave(){
+  savedOk = false;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    try {
+      window.localStorage.setItem(LS_STATE, JSON.stringify(snapshot()));
+      savedOk = true;
+      sSave.textContent = "已自動儲存 " + new Date().toLocaleTimeString();
+    } catch (e) {
+      sSave.textContent = "無法自動儲存（瀏覽器拒絕 localStorage）";
+    }
+  }, 250);
+}
+function loadState(){
+  try {
+    var raw = window.localStorage.getItem(LS_STATE);
+    if (raw){ return restore(JSON.parse(raw)); }
+  } catch (e) {}
+  return false;
+}
+function libAll(){
+  try {
+    var raw = window.localStorage.getItem(LS_LIB);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function libWrite(arr){
+  try { window.localStorage.setItem(LS_LIB, JSON.stringify(arr)); return true; } catch (e) { return false; }
+}
+function libSave(name){
+  var arr = libAll();
+  var entry = { name: name || ("PROGRAM " + (arr.length + 1)), at: Date.now(), data: snapshot() };
+  var i = -1;
+  for (var k=0;k<arr.length;k++) if (arr[k].name === entry.name) i = k;
+  if (i >= 0) arr[i] = entry; else arr.push(entry);
+  libWrite(arr);
+  renderLib();
+  return entry;
+}
+function libDelete(name){
+  var arr = libAll().filter(function(e){ return e.name !== name; });
+  libWrite(arr);
+  renderLib();
+}
+function libLoad(name){
+  var arr = libAll();
+  for (var i=0;i<arr.length;i++) if (arr[i].name === name){
+    restore(arr[i].data);
+    autosave();
+    renderLib();
+    return true;
+  }
+  return false;
+}
+function txtDump(){
+  var out = ["CASIO FX-603P SIMULATOR — PROGRAM LISTING",
+             "exported: " + new Date().toISOString(),
+             "registers: " + M.regs.map(function(v,i){ return "M"+pad3(i)+"="+v; }).join(" "), ""];
+  AREAS.forEach(function(a){
+    var arr = M.progs[a] || [];
+    if (!arr.length) return;
+    out.push("=== " + a + " (" + arr.length + " steps) ===");
+    arr.forEach(function(s, i){ out.push(String(i+1).padStart(4," ") + "  " + stepLabel(s)); });
+    out.push("");
+  });
+  return out.join("\n");
+}
+function download(name, text, mime){
+  try {
+    var blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 0);
+    return true;
+  } catch (e) { return false; }
+}
+
+/* =========================================================
+   14. 面板 UI
+   ========================================================= */
+function renderLib(){
+  var el = document.getElementById("lib-list");
+  var arr = libAll();
+  if (!arr.length){ el.innerHTML = '<p class="warn">（尚無已存程式庫項目）</p>'; return; }
+  var html = "";
+  arr.slice().sort(function(a,b){ return b.at - a.at; }).forEach(function(e){
+    var steps = 0; for (var k in e.data.progs) steps += (e.data.progs[k]||[]).length;
+    html += '<div class="libitem"><div><div class="nm">' + esc(e.name) + '</div>' +
+            '<div class="mt">' + new Date(e.at).toLocaleString() + ' · ' + steps + ' 步</div></div>' +
+            '<div class="acts">' +
+            '<button class="btn mini" data-load="' + esc(e.name) + '">載入</button>' +
+            '<button class="btn mini" data-exp="' + esc(e.name) + '">匯出</button>' +
+            '<button class="btn mini dan" data-del="' + esc(e.name) + '">刪除</button>' +
+            '</div></div>';
+  });
+  el.innerHTML = html;
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+  return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c]; }); }
+function renderListing(){
+  var arr = area();
+  if (!arr.length){ listingEl.textContent = "（此區塊尚無程式步）"; }
+  else {
+    listingEl.textContent = arr.map(function(s,i){
+      return String(i+1).padStart(4," ") + "  " + stepLabel(s);
+    }).join("\n");
+  }
+}
+function renderPGrid(){
+  var g = document.getElementById("pgrid");
+  if (g.children.length !== 20){
+    g.innerHTML = "";
+    for (var i=0;i<20;i++){
+      var b = document.createElement("button");
+      b.className = "pkey";
+      b.textContent = "P" + i;
+      b.setAttribute("data-p", "P" + i);
+      g.appendChild(b);
+    }
+  }
+  for (var j=0;j<g.children.length;j++){
+    g.children[j].classList.toggle("act", g.children[j].getAttribute("data-p") === M.area);
+  }
+}
+function renderSamples(){
+  var el = document.getElementById("samples");
+  if (el.children.length) return;
+  SAMPLES.forEach(function(s){
+    var b = document.createElement("button");
+    b.className = "btn";
+    b.textContent = s.name;
+    b.setAttribute("data-sample", s.name);
+    el.appendChild(b);
+  });
+}
+
+/* =========================================================
+   15. 範例程式
+   ========================================================= */
+var SAMPLES = [
+  { name:"階乘 n!（P0）", area:"P0", steps:[
+      {t:"alpha",ch:"n"},{t:"alpha",ch:"!"},{t:"alpha",ch:"="},
+      {t:"hlt"},{t:"sto",n:0,ind:false},{t:"num",v:1},
+      {t:"lbl",n:0},{t:"op",v:"*"},{t:"rcl",n:0,ind:false},
+      {t:"dsz",r:0},{t:"goto",n:0,ind:false},{t:"eq"}
+    ], hint:"輸入 5 後按 EXE → 120" },
+  { name:"圓面積（P1）", area:"P1", steps:[
+      {t:"alpha",ch:"A"},{t:"alpha",ch:"="},{t:"hlt"},
+      {t:"fn",v:"x2"},{t:"op",v:"*"},{t:"fn",v:"pi"},{t:"eq"}
+    ], hint:"輸入半徑後按 EXE" },
+  { name:"1..n 加總（P2）", area:"P2", steps:[
+      {t:"hlt"},{t:"sto",n:1,ind:false},{t:"num",v:0},{t:"sto",n:2,ind:false},
+      {t:"lbl",n:1},{t:"rcl",n:1,ind:false},{t:"op",v:"+"},{t:"rcl",n:2,ind:false},
+      {t:"eq"},{t:"sto",n:2,ind:false},{t:"dsz",r:1},{t:"goto",n:1,ind:false},
+      {t:"rcl",n:2,ind:false}
+    ], hint:"輸入 n 後按 EXE" }
+];
+function loadSample(name){
+  var s = null;
+  for (var i=0;i<SAMPLES.length;i++) if (SAMPLES[i].name === name) s = SAMPLES[i];
+  if (!s) return;
+  M.progs[s.area] = JSON.parse(JSON.stringify(s.steps));
+  M.area = s.area;
+  M.dirty = true;
+  autosave();
+  renderPGrid(); renderListing();
+}
+
+/* =========================================================
+   16. 事件綁定
+   ========================================================= */
+document.getElementById("keys").addEventListener("click", function(ev){
+  var b = ev.target.closest ? ev.target.closest(".key") : null;
+  if (!b) return;
+  b.blur();
+  var k = b.getAttribute("data-k");
+  var v = /^[0-9]$/.test(k) ? parseInt(k, 10) : undefined;
+  press(k, v);
+  if (M.dirty){ M.dirty = false; autosave(); renderListing(); renderPGrid(); }
+  render();
+});
+document.getElementById("pgrid").addEventListener("click", function(ev){
+  var b = ev.target.closest ? ev.target.closest("[data-p]") : null;
+  if (!b) return;
+  var name = b.getAttribute("data-p");
+  if (M.mode === 1){ M.area = name; M.dirty = true; autosave(); }
+  else { callArea(name); }
+  renderPGrid(); renderListing(); render();
+});
+document.getElementById("samples").addEventListener("click", function(ev){
+  var b = ev.target.closest ? ev.target.closest("[data-sample]") : null;
+  if (!b) return;
+  loadSample(b.getAttribute("data-sample"));
+  render();
+});
+document.getElementById("lib-list").addEventListener("click", function(ev){
+  var t = ev.target;
+  if (!t || !t.getAttribute) return;
+  var l = t.getAttribute("data-load"), d = t.getAttribute("data-del"), x = t.getAttribute("data-exp");
+  if (l){ if (libLoad(l)) render(); }
+  else if (d){ libDelete(d); }
+  else if (x){
+    var arr = libAll();
+    for (var i=0;i<arr.length;i++) if (arr[i].name === x){
+      download("fx603p-" + x.replace(/[^\w\u4e00-\u9fa5-]+/g,"_") + ".json",
+        JSON.stringify(arr[i], null, 2), "application/json");
+    }
+  }
+});
+document.getElementById("btn-lib-save").addEventListener("click", function(){
+  var nm = document.getElementById("lib-name").value.trim();
+  libSave(nm);
+  document.getElementById("lib-name").value = "";
+});
+document.getElementById("btn-export-json").addEventListener("click", function(){
+  download("fx603p-state.json", JSON.stringify(snapshot(), null, 2), "application/json");
+});
+document.getElementById("btn-export-txt").addEventListener("click", function(){
+  download("fx603p-listing.txt", txtDump(), "text/plain;charset=utf-8");
+});
+document.getElementById("btn-import").addEventListener("click", function(){
+  document.getElementById("file-import").click();
+});
+document.getElementById("file-import").addEventListener("change", function(e){
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function(){
+    try {
+      var obj = JSON.parse(String(fr.result));
+      var data = obj && obj.data ? obj.data : obj;      // 相容「程式庫項目」與「純狀態」
+      if (restore(data)){ autosave(); renderPGrid(); renderListing(); render(); }
+      else sSave.textContent = "匯入失敗：格式不符";
+    } catch (err) { sSave.textContent = "匯入失敗：" + err.message; }
+  };
+  fr.readAsText(f);
+  e.target.value = "";
+});
+document.getElementById("btn-clear-all").addEventListener("click", function(){
+  AREAS.forEach(function(a){ M.progs[a] = []; });
+  M.alphaLine = ""; M.dirty = true;
+  autosave(); renderPGrid(); renderListing(); render();
+});
+document.getElementById("btn-clear-area").addEventListener("click", function(){
+  M.progs[M.area] = []; M.dirty = true;
+  autosave(); renderListing(); render();
+});
+document.getElementById("btn-copy-list").addEventListener("click", function(){
+  var t = txtDump();
+  try {
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    else {
+      var ta = document.createElement("textarea");
+      ta.value = t; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove();
+    }
+    sSave.textContent = "程式清單已複製到剪貼簿";
+  } catch (e) { sSave.textContent = "複製失敗，請用「匯出程式清單」"; }
+});
+
+/* =========================================================
+   17. 啟動
+   ========================================================= */
+loadState();
+renderLib();
+renderSamples();
+renderPGrid();
+renderListing();
+render();
+window.setInterval(function(){
+  render();
+  if (M.dirty){ M.dirty = false; autosave(); renderListing(); }
+}, 120);
+
+/* 測試／除錯掛勾（給 selftest.js 用） */
+window.__fx = {
+  M: M, press: press, area: area, setMode: setMode, callArea: callArea,
+  snapshot: snapshot, restore: restore, autosave: autosave, loadState: loadState,
+  libSave: libSave, libLoad: libLoad, libDelete: libDelete, libAll: libAll,
+  txtDump: txtDump, stepLabel: stepLabel, fmtNum: fmtNum, samples: SAMPLES,
+  loadSample: loadSample,
+  /* 目前畫在點矩陣上的實際內容（供測試與除錯） */
+  screen: function(){ return { l1: LINE1.text || "", l2: LINE2.text || "", step: STEP.text || "" }; },
+  pressSeq: function(list){
+    list.forEach(function(k){
+      if (typeof k === "number") press(String(k), k);
+      else press(k, /^[0-9]$/.test(k) ? parseInt(k,10) : undefined);
+    });
+    render();
+  }
+};
+})();
+</script>
+</body>
+</html>
