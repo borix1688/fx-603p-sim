@@ -389,6 +389,30 @@ ok(fx().M.prog.paused === true, "MODE 0 (RUN) 點區塊會直接執行", fx().M.
 press(["ac"]);
 reset();
 
+/* ================= 3e. 程式容量上限 ================= */
+console.log("\n=== 容量上限（P0–P19 / 6144 步）===");
+reset();
+ok(Object.keys(fx().M.progs).length === 20, "共有 20 個程式區塊（P0–P19）",
+  Object.keys(fx().M.progs).length);
+reset();
+fx().M.progs.P0 = new Array(6144).fill({ t: "eq" });     // 塞滿上限
+fx().M.err = false;
+press(["mode", "1"]);
+press(["hlt"]);                                           // 已滿 → 應該被擋下
+ok(fx().M.progs.P0.length === 6144, "達到 6144 步後不再增加", fx().M.progs.P0.length);
+ok(fx().M.err === true, "超過上限會設為 ERROR 狀態", fx().M.err);
+press(["ac"]);
+ok(fx().M.err === false, "AC 可清除 ERROR");
+fx().M.progs.P0 = new Array(6142).fill({ t: "eq" });
+press(["mode", "1"]);
+press(["hlt", "hlt"]);
+ok(fx().M.progs.P0.length === 6144, "未滿時仍可寫入到剛好 6144 步", fx().M.progs.P0.length);
+reset();
+fx().loadSample("一元二次方程式 (P1)");
+ok(fx().M.progs.P1.length === 131 && fx().M.progs.P2.length === 0,
+  "程式分區獨立：P1 有 131 步時 P2 仍為空", "P1=" + fx().M.progs.P1.length + " P2=" + fx().M.progs.P2.length);
+reset();
+
 /* ================= 4. 顯示 ================= */
 console.log("\n=== 點矩陣顯示 ===");
 reset();

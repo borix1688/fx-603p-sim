@@ -773,7 +773,11 @@ function stepLabel(s){
   }
   return s.t;
 }
-function wrtPush(s){ area().push(s); M.dirty = true; }
+function wrtPush(s){
+  var a = area();
+  if (a.length >= 6144){ M.err = true; M.dirty = true; return; }   // 全機 6144 步上限
+  a.push(s); M.dirty = true;
+}
 var FN_KEYS = {
   sin:"sin", cos:"cos", tan:"tan", log:"log", ln:"ln",
   x2:"x2", sqrt:"sqrt", invx:"invx", fact:"fact",
