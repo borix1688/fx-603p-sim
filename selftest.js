@@ -372,6 +372,11 @@ fx().samples.forEach((s) => {
 reset();
 fx().loadSample("1..n 加總（P2）");
 ok(fx().M.progs.P2.length === 13, "P2 = 1..n 加總（13 步）", fx().M.progs.P2.length);
+ok(els.pgrid.children[2].textContent === "P2 · 13",
+  "面板區塊按鈕直接顯示「P2 · 13」步數", els.pgrid.children[2].textContent);
+ok(els.pgrid.children[2]._cls.has("has"), "有程式的區塊會標記綠底 (class=has)");
+ok(els.pgrid.children[0].textContent === "P0" && !els.pgrid.children[0]._cls.has("has"),
+  "空區塊只顯示 P0、不標綠底", els.pgrid.children[0].textContent);
 /* MODE 2 點區塊只切換檢視，不執行 */
 fx().setMode(2);
 els.pgrid.children[1].click();                       // 面板上的 P1 按鈕
