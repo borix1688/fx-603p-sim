@@ -277,6 +277,14 @@
         <button class="btn" id="btn-gorun">切到 RUN</button>
         <button class="btn pri" id="btn-run">▶ 執行 P1</button>
       </div>
+      <div class="row">
+        <label><input type="checkbox" id="opt-sound" checked> 按鍵回饋音</label>
+        <label>音量 <input type="range" id="opt-vol" min="0" max="1" step="0.05" value="0.8"></label>
+        <button class="btn" id="btn-sfx-test" type="button">🔊 測試音效</button>
+        <span class="warn">狀態：<b id="s-audio">未解鎖</b></span>
+      </div>
+      <p class="warn">FX-603P 實機<b>沒有蜂鳴器</b>，所以這是本模擬器額外加的「操作回饋」（數鍵／運算子／負號／EXE／換模式各有不同音高，程式開始、HLT 暫停、結束、ERROR 也各有提示音），可以隨時關掉。<br>
+        <b>iPhone 沒聲音時</b>：① 先點一下畫面任一按鍵讓音訊解鎖（狀態會變 <code>running</code>）② 確認側邊<b>靜音鍵沒切到靜音</b>（iOS 會連網頁音效一起靜音）③ 媒體音量要開大。</p>
       <p class="warn"><b>手機建議流程</b>：① 按「切到 RUN」→ ② 按「**▶ 執行 P1**」（不管什麼模式都一定會執行）。<br>
         <b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<br>
         <b>要看某個區塊裡有什麼程式</b>：切到 <b>MODE 2 (EDIT)</b> 或 <b>MODE 1 (WRT)</b> 再點該區塊（只切換檢視，不會執行），下方清單就會顯示內容。<br>
@@ -525,6 +533,8 @@ var M = {
   lastStep: null,      // 錄製中的暫存步（等待位址）
   err: false,
   mem: 0,
+  sound: true,         // 操作回饋音（實機沒有蜂鳴器，這是模擬器加的功能）
+  vol: 0.8,
   dirty: false
 };
 AREAS.forEach(function(a){ M.progs[a] = []; });
@@ -926,6 +936,7 @@ function startArea(name, fromPc){
   M.prog.paused = false;
   M.prog.gsb = [];
   M.prog.ret = [];
+  SFX.run();
   runSteps();
 }
 function runSteps(){
@@ -956,6 +967,7 @@ function endProgram(){
   /* 不主動 flush 未完成的運算：程式跑到結尾就停在目前的 X */
   M.entry = null;
   M.dirty = true;
+  SFX.done();
 }
 function execStep(s, arr){
   switch(s.t){
@@ -997,6 +1009,7 @@ function execStep(s, arr){
       if (M.entry !== null && M.entry !== "") M.x = parseFloat(M.entry) || 0;
       M.entry = null; M.xPushed = false;
       M.prog.paused = true;
+      SFX.pause();
       return false;
     case "dsz": {
       var r = (s.r === null || s.r === undefined) ? 0 : s.r;
@@ -1137,6 +1150,7 @@ function press(k, v){
   /* 數字鍵正規化：鍵面 data-k 是 "0".."9"，內部一律當成 "digit" */
   var rawK = k;
   if (/^[0-9]$/.test(k)){ v = parseInt(k, 10); k = "digit"; }
+  keySound(rawK);                                   // 操作回饋音
 
   /* ALPHA 模式：先當成字元輸入（要用原始鍵名查表） */
   if (M.alpha && k !== "alpha"){
@@ -1249,7 +1263,8 @@ function pendingExpr(){
 var listingEl = document.getElementById("listing");
 var totalEl = document.getElementById("s-total");
 
-function indOn(name, on){ if (IND_MAP[name]) IND_MAP[name].classList.toggle("on", !!on); }
+var indOn = function(name, on){ if (IND_MAP[name]) IND_MAP[name].classList.toggle("on", !!on); };
+var lastErrState = false;
 function render(){
   var line1 = "", line2 = "";
   var stepText = "    ";
@@ -1286,6 +1301,8 @@ function render(){
   indOn("FIX", M.fix >= 0); indOn("SCI", M.sci >= 0);
   indOn("MEM", savedOk);
   indOn("ERR", M.err);
+  if (M.err && !lastErrState) SFX.error();          // 進入 ERROR 時發聲
+  lastErrState = M.err;
   indOn("2nd", M.second); indOn("INV", M.inv);
   indOn("GSB", M.prog.gsb && M.prog.gsb.length > 0);
 
@@ -1327,7 +1344,8 @@ function snapshot(){
     mode: M.mode, area: M.area,
     progs: M.progs, regs: M.regs,
     deg: M.deg, rad: M.rad, gra: M.gra, fix: M.fix, sci: M.sci,
-    alphaLine: M.alphaLine
+    alphaLine: M.alphaLine,
+    sound: M.sound, vol: M.vol
   };
 }
 function restore(data){
@@ -1347,6 +1365,10 @@ function restore(data){
   M.fix = (typeof data.fix === "number") ? data.fix : -1;
   M.sci = (typeof data.sci === "number") ? data.sci : -1;
   M.alphaLine = typeof data.alphaLine === "string" ? data.alphaLine.slice(0,16) : "";
+  M.sound = (data.sound === undefined) ? true : !!data.sound;
+  M.vol = (typeof data.vol === "number" && data.vol >= 0 && data.vol <= 1) ? data.vol : 0.8;
+  applyVolume();
+  syncSoundUI();
   /* 暫存運算狀態一律重置 */
   M.stack = []; M.vals = []; M.xPushed = false;
   M.entry = null; M.x = 0; M.lastStep = null; M.err = false;
@@ -1567,6 +1589,91 @@ function seedSamples(){
 }
 
 /* =========================================================
+   15b. 操作回饋音（實機沒有蜂鳴器，這是模擬器加的功能）
+   ========================================================= */
+var AC = null, MASTER = null, audioState = "idle";
+function audio(){
+  if (!AC){
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx){ audioState = "unsupported"; return null; }
+    try { AC = new Ctx(); } catch (e) { audioState = "error"; return null; }
+    MASTER = AC.createGain();
+    MASTER.gain.value = M.vol;
+    MASTER.connect(AC.destination);
+  }
+  return AC;
+}
+/* 行動瀏覽器要求：必須在使用者手勢中建立／恢復 AudioContext 才發得出聲音 */
+function unlockAudio(){
+  var ac = audio();
+  if (!ac){ syncSoundUI(); return; }
+  if (ac.state !== "running" && ac.resume){
+    try {
+      var p = ac.resume();
+      if (p && p.then) p.then(function(){ audioState = AC.state; syncSoundUI(); });
+    } catch (e) {}
+  }
+  audioState = ac.state;
+  syncSoundUI();
+}
+function applyVolume(){ if (MASTER) MASTER.gain.value = M.vol; }
+function tone(freq, ms, type, vol, delay){
+  if (!M.sound) return;
+  var ac = audio(); if (!ac) return;
+  if (ac.state !== "running" && ac.resume){ try { ac.resume(); } catch (e) {} }
+  var t0 = ac.currentTime + (delay || 0) / 1000;
+  var osc = ac.createOscillator(), g = ac.createGain();
+  osc.type = type || "square";
+  osc.frequency.setValueAtTime(freq, t0);
+  var peak = vol == null ? 0.08 : vol;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+  osc.connect(g); g.connect(MASTER || ac.destination);
+  osc.start(t0); osc.stop(t0 + ms / 1000 + 0.02);
+}
+var SFX = {
+  digit:  function(){ tone(1900, 11, "square", 0.07); },
+  op:     function(){ tone(1150, 15, "square", 0.08); },
+  fn:     function(){ tone(1500, 14, "square", 0.07); },
+  neg:    function(){ tone(700, 20, "square", 0.09); },      // 負號：音高不同，聽得出來
+  enter:  function(){ tone(2300, 26, "square", 0.09); },     // EXE / =
+  mode:   function(){ tone(560, 26, "square", 0.08); },      // 換模式
+  run:    function(){ tone(1046, 30, "square", 0.09); tone(1568, 34, "square", 0.08, 40); },
+  pause:  function(){ tone(880, 70, "square", 0.09); },      // HLT 暫停
+  done:   function(){ tone(1318, 42, "square", 0.09); tone(1760, 52, "square", 0.08, 46); },
+  error:  function(){ tone(220, 150, "square", 0.10); },
+  test:   function(){ [523,659,784,1046].forEach(function(f,i){ tone(f, 110, "square", 0.09, i*120); }); }
+};
+function keySound(k){
+  if (!M.sound) return;
+  if (/^[0-9]$/.test(k) || k === "dot") SFX.digit();
+  else if (k === "add" || k === "sub" || k === "mul" || k === "div") SFX.op();
+  else if (k === "sign") SFX.neg();
+  else if (k === "eq" || k === "exe") SFX.enter();
+  else if (k === "mode") SFX.mode();
+  else SFX.fn();
+}
+/* 面板上的音訊狀態／開關同步 */
+function syncSoundUI(){
+  var el = document.getElementById("s-audio");
+  if (el){
+    var txt, cls;
+    if (audioState === "unsupported"){ txt = "此瀏覽器不支援 WebAudio"; cls = "bad"; }
+    else if (!M.sound){ txt = "已關閉"; cls = ""; }
+    else if (AC && AC.state === "running"){ txt = "已就緒 running"; cls = "ok"; }
+    else if (AC){ txt = AC.state + "（點一下畫面即可解鎖）"; cls = "bad"; }
+    else { txt = "未解鎖（點一下畫面）"; cls = "bad"; }
+    el.textContent = txt;
+    el.className = cls;
+  }
+  var cb = document.getElementById("opt-sound");
+  if (cb) cb.checked = !!M.sound;
+  var vs = document.getElementById("opt-vol");
+  if (vs) vs.value = String(M.vol);
+}
+
+/* =========================================================
    16. 事件綁定
    ========================================================= */
 document.getElementById("keys").addEventListener("click", function(ev){
@@ -1678,11 +1785,32 @@ document.getElementById("btn-copy-list").addEventListener("click", function(){
   } catch (e) { sSave.textContent = "複製失敗，請用「匯出程式清單」"; }
 });
 
+/* 音效設定與解鎖 */
+document.getElementById("opt-sound").addEventListener("change", function(e){
+  M.sound = e.target.checked;
+  if (M.sound){ unlockAudio(); SFX.digit(); }
+  syncSoundUI(); autosave();
+});
+document.getElementById("opt-vol").addEventListener("input", function(e){
+  M.vol = parseFloat(e.target.value);
+  if (isNaN(M.vol)) M.vol = 0.8;
+  applyVolume(); autosave();
+});
+document.getElementById("btn-sfx-test").addEventListener("click", function(){
+  unlockAudio();
+  SFX.test();
+});
+window.addEventListener("pageshow", function(){ syncSoundUI(); });
+/* 任何手勢都先解鎖音訊（行動瀏覽器限制） */
+["pointerdown","touchstart","mousedown","keydown"].forEach(function(evt){
+  document.addEventListener(evt, function(){ unlockAudio(); }, { passive: true });
+});
+
 /* =========================================================
    17. 啟動
    ========================================================= */
 /* 版本標記：方便確認手機／瀏覽器有沒有拿到最新版（請於每次更新時遞增） */
-var BUILD = "v1.8";
+var BUILD = "v1.9";
 document.getElementById("build").textContent = BUILD;
 
 /* 啟動：先載回使用者存過的狀態；若是第一次開啟（或還沒播種過），
@@ -1703,6 +1831,7 @@ renderSamples();
 renderPGrid();
 renderListing();
 render();
+syncSoundUI();
 window.setInterval(function(){
   render();
   if (M.dirty){ M.dirty = false; autosave(); renderListing(); }

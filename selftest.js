@@ -63,17 +63,33 @@ class El {
 
 const els = {};
 const store = {};
+const handlers = {};
 let lastBlob = null;
 let intervalCb = null;
+
+/* ---------------- 假的 WebAudio：用來數「有沒有真的發聲」 ---------------- */
+let toneCount = 0;
+class FakeParam { setValueAtTime() {} exponentialRampToValueAtTime() {} linearRampToValueAtTime() {} }
+class FakeOsc {
+  constructor() { this.frequency = new FakeParam(); this.type = ""; }
+  connect() {} start() { toneCount++; } stop() {}
+}
+class FakeGain { constructor() { this.gain = new FakeParam(); } connect() {} }
+global.AudioContext = class {
+  constructor() { this.currentTime = 0; this.state = "running"; this.destination = {}; }
+  createOscillator() { return new FakeOsc(); }
+  createGain() { return new FakeGain(); }
+  resume() { return Promise.resolve(); }
+};
 
 global.document = {
   getElementById: (id) => (els[id] = els[id] || new El("div")),
   createElement: (t) => new El(t),
   body: new El("body"),
-  addEventListener: () => {},
+  addEventListener: (t, f) => { (handlers[t] = handlers[t] || []).push(f); },
 };
 global.window = global;
-global.addEventListener = () => {};
+global.addEventListener = (t, f) => { (handlers[t] = handlers[t] || []).push(f); };
 global.localStorage = {
   getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
   setItem: (k, v) => { store[k] = String(v); },
@@ -533,6 +549,46 @@ const nA = fx().M.x; press(["exe"]); press([]);
 const nB = fx().M.x;
 ok(near(nA, 1) && near(nB, 2),
   "-x²+3x-2=0 的兩根 = 1 與 2（(-3+1)/(-2)=1、(-3-1)/(-2)=2，負係數輸入正確）", nA + " / " + nB);
+reset();
+
+/* ================= 3h. 操作回饋音 ================= */
+console.log("\n=== 操作回饋音 ===");
+reset();
+ok(!!els["s-audio"] && !!els["btn-sfx-test"], "面板有音訊狀態與測試音效按鈕");
+const t0 = toneCount;
+els["btn-sfx-test"].click();
+ok(toneCount - t0 >= 4, "「測試音效」發出 4 個音（實際 " + (toneCount - t0) + "）");
+ok(String(els["s-audio"].textContent).indexOf("running") >= 0, "狀態顯示 running", els["s-audio"].textContent);
+const t1 = toneCount;
+press(["7"]);
+ok(toneCount > t1, "按數字鍵有回饋音");
+const t2 = toneCount;
+press(["add"]);
+ok(toneCount > t2, "按運算子有回饋音");
+const t3 = toneCount;
+press(["sign"]);
+ok(toneCount > t3, "按負號鍵有回饋音（音高不同）");
+const t4 = toneCount;
+fx().loadSample("圓面積（P3）");
+fx().callArea("P3");
+ok(toneCount > t4, "執行程式會發出開始音並在 HLT 發暫停音（" + (toneCount - t4) + " 個）");
+press(["ac"]);
+/* 關掉音效 */
+els["opt-sound"]._listeners.change.forEach((f) => f({ target: { checked: false } }));
+reset();
+const t5 = toneCount;
+press(["1"]); press(["add"]); press(["2"]); press(["eq"]);
+ok(toneCount === t5, "關掉「按鍵回饋音」後完全不會發聲", toneCount - t5);
+ok(String(els["s-audio"].textContent).indexOf("已關閉") >= 0, "狀態顯示已關閉", els["s-audio"].textContent);
+/* 音量 */
+els["opt-vol"]._listeners.input.forEach((f) => f({ target: { value: "0.3" } }));
+ok(near(fx().M.vol, 0.3), "音量滑桿可調整並記在狀態裡", fx().M.vol);
+els["opt-sound"]._listeners.change.forEach((f) => f({ target: { checked: true } }));
+ok(fx().M.sound === true, "可以再把音效打開");
+ok((handlers.pointerdown || []).length > 0, "有註冊手勢解鎖監聽（pointerdown）");
+let aerr = null;
+try { (handlers.pointerdown || []).forEach((f) => f({})); } catch (e) { aerr = e.message; }
+ok(aerr === null, "手勢解鎖不會丟錯", aerr);
 reset();
 
 /* ================= 4. 顯示 ================= */
