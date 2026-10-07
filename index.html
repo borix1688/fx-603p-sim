@@ -140,6 +140,10 @@
   @media (pointer:coarse){
     .key{height:38px}
     .key{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+    /* 手機：面板按鈕要夠大好點（原本區塊按鈕只有 ~21px 高） */
+    .pkey{padding:11px 0;font-size:12px;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .btn{padding:11px 13px;font-size:12.5px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .libitem .mini{padding:9px 11px}
   }
 </style>
 </head>
@@ -232,7 +236,7 @@
   <!-- ================= 面板 ================= -->
   <div class="panel">
     <div class="card">
-      <h2>CASIO FX-603P 模擬器</h2>
+      <h2>CASIO FX-603P 模擬器 <span class="tag" id="build">build</span></h2>
       <p>1990 年 Casio 可程式電卓旗艦的網頁復刻：<b>keystroke programming</b>（按鍵即程式步）、<b>P0–P19</b> 程式區、<b>LBL0–L9</b> 區域標籤、<b>DSZ/ISZ</b> 迴圈、<b>IND</b> 間接定址、<b>110</b> 個記憶暫存器。<b>你寫的程式會自動存在瀏覽器裡，關掉瀏覽器再開still在。</b></p>
       <div class="grid2">
         <div class="stat"><b>MODE</b><span id="s-mode">RUN</span></div>
@@ -262,7 +266,13 @@
 
     <div class="card">
       <h2>程式區塊</h2>
-      <p class="warn"><b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<br>
+      <div class="row">
+        <span class="warn">模式 <b id="s-mode2">RUN</b> · 目前區塊 <b id="s-area2">P1</b></span>
+        <button class="btn" id="btn-gorun">切到 RUN</button>
+        <button class="btn pri" id="btn-run">▶ 執行 P1</button>
+      </div>
+      <p class="warn"><b>手機建議流程</b>：① 按「切到 RUN」→ ② 按「**▶ 執行 P1**」（不管什麼模式都一定會執行）。<br>
+        <b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<br>
         <b>要看某個區塊裡有什麼程式</b>：切到 <b>MODE 2 (EDIT)</b> 或 <b>MODE 1 (WRT)</b> 再點該區塊（只切換檢視，不會執行），下方清單就會顯示內容。<br>
         <b>首次開啟時 20 個區塊都是空的</b>——內建範例要按上面的範例按鈕才會載入。<br>
         <b>綠底 = 該區塊已有程式</b>，右邊數字是步數，所以一眼就能看出哪個區塊有東西。</p>
@@ -1192,6 +1202,9 @@ var sArea = document.getElementById("s-area");
 var sStep = document.getElementById("s-step");
 var sX = document.getElementById("s-x");
 var sSave = document.getElementById("s-save");
+var sMode2 = document.getElementById("s-mode2");
+var sArea2 = document.getElementById("s-area2");
+var btnRun = document.getElementById("btn-run");
 var listingEl = document.getElementById("listing");
 var totalEl = document.getElementById("s-total");
 
@@ -1240,6 +1253,10 @@ function render(){
   sStep.textContent = String(area().length);
   sX.textContent = fmtNum(curX());
   totalEl.textContent = String(totalSteps());
+  /* 面板上的模式／區塊提示與快速執行按鈕 */
+  if (sMode2) sMode2.textContent = ["RUN","WRT","EDIT"][M.mode];
+  if (sArea2) sArea2.textContent = M.area + (area().length ? "（" + area().length + " 步）" : "（空的）");
+  if (btnRun) btnRun.textContent = "▶ 執行 " + M.area;
 }
 function pendingText(){
   var s = M.lastStep; if (!s) return "";
@@ -1583,6 +1600,20 @@ document.getElementById("btn-seed").addEventListener("click", function(){
   autosave();
   renderPGrid(); renderListing(); render();
 });
+/* 手機用：不管目前模式，直接執行目前選取的區塊 */
+document.getElementById("btn-run").addEventListener("click", function(){
+  if (!area().length){
+    sSave.textContent = M.area + " 是空的：請先按上面的範例按鈕載入，或切到 MODE 1 錄製程式";
+    render();
+    return;
+  }
+  callArea(M.area);
+  renderPGrid(); renderListing(); render();
+});
+document.getElementById("btn-gorun").addEventListener("click", function(){
+  setMode(0);
+  renderPGrid(); renderListing(); render();
+});
 document.getElementById("btn-clear-all").addEventListener("click", function(){
   AREAS.forEach(function(a){ M.progs[a] = []; });
   M.alphaLine = ""; M.dirty = true;
@@ -1608,6 +1639,10 @@ document.getElementById("btn-copy-list").addEventListener("click", function(){
 /* =========================================================
    17. 啟動
    ========================================================= */
+/* 版本標記：方便確認手機／瀏覽器有沒有拿到最新版（請於每次更新時遞增） */
+var BUILD = "v1.6";
+document.getElementById("build").textContent = BUILD;
+
 /* 啟動：先載回使用者存過的狀態；若是第一次開啟（或還沒播種過），
    自動把內建範例寫進 P0–P3，這樣一打開就有 P1 的一元二次方程式可以跑。
    播種只做一次（用 localStorage 標記），之後使用者自己清空就不會再被塞回來。 */

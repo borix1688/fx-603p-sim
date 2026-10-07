@@ -429,6 +429,34 @@ ok(fx().M.progs.P1.length === 131 && fx().M.progs.P2.length === 0,
   "程式分區獨立：P1 有 131 步時 P2 仍為空", "P1=" + fx().M.progs.P1.length + " P2=" + fx().M.progs.P2.length);
 reset();
 
+/* ================= 3f. 手機用的快速執行與模式提示 ================= */
+console.log("\n=== 快速執行按鈕（手機路徑）===");
+reset();
+fx().loadSample("一元二次方程式 (P1)");
+fx().setMode(1);                                        // 故意停在 WRT
+els["btn-run"].click();                                 // 「▶ 執行 P1」不受模式影響
+ok(fx().M.prog.paused === true && fx().M.prog.area === "P1",
+  "WRT 模式下按「▶ 執行 P1」也會執行", fx().M.prog.area + " paused=" + fx().M.prog.paused);
+press(["ac"]);
+fx().setMode(2);
+els["btn-gorun"].click();
+ok(fx().M.mode === 0, "「切到 RUN」按鈕會把模式切回 RUN", fx().M.mode);
+reset();
+els["btn-run"].click();
+ok(fx().M.prog.running === false, "空區塊按「▶ 執行」不會爆炸");
+ok(String(els["s-save"].textContent).indexOf("是空的") >= 0, "空區塊會提示要先載入程式",
+  els["s-save"].textContent);
+reset();
+els["pkey-probe"]; // noop
+reset();
+press(["mode", "2"]);
+press([]);
+ok(String(els["s-mode2"].textContent) === "EDIT" && String(els["s-area2"].textContent).indexOf("P") === 0,
+  "面板顯示目前模式與區塊", els["s-mode2"].textContent + " / " + els["s-area2"].textContent);
+ok(String(els["build"].textContent).indexOf("v1.") === 0, "面板顯示版本標記（可確認是否拿到最新版）",
+  els["build"].textContent);
+reset();
+
 /* ================= 4. 顯示 ================= */
 console.log("\n=== 點矩陣顯示 ===");
 reset();
