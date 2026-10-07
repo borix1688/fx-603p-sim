@@ -690,6 +690,8 @@ function inputDigit(ch){
   if (ch === "." && M.entry.indexOf(".") >= 0) return;
   var head = M.entry.split("E")[0].replace("-", "").replace(".", "");
   if (head.length >= 12) return;
+  /* 前導 0 不保留：在 0 或 -0 之後打數字就直接取代（-0 + 4 → -4，而不是 -04） */
+  if (ch !== "." && (M.entry === "0" || M.entry === "-0")) M.entry = M.entry.slice(0, -1);
   M.entry += ch;
   M.x = parseFloat(M.entry);
   if (isNaN(M.x)) M.x = 0;

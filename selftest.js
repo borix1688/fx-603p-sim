@@ -457,6 +457,42 @@ ok(String(els["build"].textContent).indexOf("v1.") === 0, "面板顯示版本標
   els["build"].textContent);
 reset();
 
+/* ================= 3g. 輸入負數 ================= */
+console.log("\n=== 輸入負數（-4）===");
+reset();
+press(["4", "sign"]);
+ok(near(fx().M.x, -4) && screen().l2.indexOf("-4") === 0, "4 再按 +/− → -4", screen().l2);
+reset();
+press(["sign", "4"]);
+ok(near(fx().M.x, -4) && screen().l2.indexOf("-4") === 0,
+  "先按 +/− 再按 4 → -4（不會顯示 -04）", screen().l2);
+reset();
+press(["sign"]);
+ok(near(fx().M.x, 0) && screen().l2.indexOf("-0") === 0, "只按 +/− → -0", screen().l2);
+press(["sign"]);
+ok(near(fx().M.x, 0) && screen().l2.indexOf("0") === 0, "再按一次 +/− 取消負號", screen().l2);
+reset();
+press(["sign", "4", "dot", "5"]);
+ok(near(fx().M.x, -4.5), "先 +/− 再打 4.5 → -4.5", screen().l2);
+reset();
+press(["0", "4"]);
+ok(near(fx().M.x, 4) && screen().l2.indexOf("4") === 0, "0 之後打 4 → 4（前導 0 被取代）", screen().l2);
+reset();
+/* 負係數的方程式：-x²+3x-2=0 → 兩根 1 與 2 */
+fx().loadSample("一元二次方程式 (P1)");
+fx().callArea("P1");
+press([]);
+typeNum("-1"); press(["exe"]); press([]);
+typeNum("3"); press(["exe"]); press([]);
+typeNum("-2"); press(["exe"]); press([]);
+ok(screen().l1.indexOf("two real roots") === 0, "-x²+3x-2=0 → two real roots", screen().l1);
+press(["exe"]); press([]);
+const nA = fx().M.x; press(["exe"]); press([]);
+const nB = fx().M.x;
+ok(near(nA, 1) && near(nB, 2),
+  "-x²+3x-2=0 的兩根 = 1 與 2（(-3+1)/(-2)=1、(-3-1)/(-2)=2，負係數輸入正確）", nA + " / " + nB);
+reset();
+
 /* ================= 4. 顯示 ================= */
 console.log("\n=== 點矩陣顯示 ===");
 reset();
