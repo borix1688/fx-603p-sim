@@ -475,8 +475,26 @@ reset();
 press(["sign", "4", "dot", "5"]);
 ok(near(fx().M.x, -4.5), "先 +/− 再打 4.5 → -4.5", screen().l2);
 reset();
+press(["sub", "4", "eq"]);
+ok(near(fx().M.x, -4), "先用減號再打 4 → = -4（另一條路徑）", screen().l2);
+reset();
 press(["0", "4"]);
 ok(near(fx().M.x, 4) && screen().l2.indexOf("4") === 0, "0 之後打 4 → 4（前導 0 被取代）", screen().l2);
+reset();
+/* 在程式的輸入提示中輸入負數（三種打法都要成立，這裡都打 -1） */
+[["sign", "1"], ["1", "sign"], ["sub", "1"]].forEach(function (path, idx) {
+  reset();
+  fx().loadSample("一元二次方程式 (P1)");
+  fx().callArea("P1");
+  press([]);
+  press(path);                        // 打 -1 的三種方式
+  press(["exe"]); press([]);
+  const okPrompt = screen().l1.indexOf("Input B?") === 0;
+  const val = fx().M.regs[1];
+  ok(okPrompt && near(val, -1),
+    "輸入提示中打 -1（路徑 " + (idx + 1) + "：" + path.join(" ") + "）→ M01 = " + val,
+    "l1=" + screen().l1 + " M01=" + val);
+});
 reset();
 /* 負係數的方程式：-x²+3x-2=0 → 兩根 1 與 2 */
 fx().loadSample("一元二次方程式 (P1)");

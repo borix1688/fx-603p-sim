@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
@@ -74,6 +74,9 @@
   .key.pgm{background:linear-gradient(180deg,#6d7f8f,#43525f);color:#eef4fa;font-size:9.5px}
   .key.exe{background:linear-gradient(180deg,#8fd7a2,#3f9c5c);color:#062a12;font-size:11px}
   .key.acc{background:linear-gradient(180deg,#e6a35c,#b96a1e);color:#2b1400;font-size:10px}
+  /* 負號鍵：獨立顏色、獨立位置（左下角），避免和 + 混淆 */
+  .key.neg{background:linear-gradient(180deg,#ffd88f,#dfa032);color:#3a2400;font-size:15px;font-weight:800;
+    box-shadow:0 2px 0 #9c6d1c,0 3px 5px rgba(0,0,0,.35),inset 0 1px 0 #ffffff8c}
   .key.warn{background:linear-gradient(180deg,#e2837a,#b8453a);color:#fff;font-size:11px}
   .key .al{position:absolute;right:3px;top:2px;font:700 6.5px/1 ui-monospace,monospace;color:#7c828b;letter-spacing:0}
   .key.op .al,.key.pgm .al,.key.exe .al,.key.acc .al,.key.warn .al{color:#ffffff8c}
@@ -138,7 +141,9 @@
     .grid2{grid-template-columns:1fr}
   }
   @media (pointer:coarse){
-    .key{height:38px}
+    .key{height:46px;font-size:12px}
+    .key.num{font-size:15px}
+    .key.neg{font-size:17px}
     .key{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     /* 手機：面板按鈕要夠大好點（原本區塊按鈕只有 ~21px 高） */
     .pkey{padding:11px 0;font-size:12px;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -225,9 +230,9 @@
       <button class="key op"  data-k="sub">−</button>
       <button class="key warn" data-k="ac">AC</button>
 
+      <button class="key neg"  data-k="sign" data-al="L" data-hint="負號">(−)</button>
       <button class="key num" data-k="0" data-al="A">0</button>
       <button class="key num" data-k="dot" data-al="K">.</button>
-      <button class="key fn"  data-k="sign" data-al="L">+/−</button>
       <button class="key op"  data-k="add">+</button>
       <button class="key op"  data-k="eq">=</button>
     </div>
@@ -314,6 +319,13 @@
         <li><code>CLS</code>（<code>2nd</code> + <kbd>CLR</kbd>）：清除第一行文字；在 RUN 模式下直接清掉目前的第一行。</li>
         <li><code>ALPHA</code>：輸入文字（鍵面右上角小字就是 ALPHA 字元），會顯示在第一行。</li>
         <li><code>=</code>：完成運算；程式跑到區塊結尾會自動停止。</li>
+      </ul>
+      <h3>輸入負數（例如 -4）</h3>
+      <ul>
+        <li>按左下角的 <b>(−)</b> 鍵（黃色，獨立位置不會誤點到 <code>+</code>）：<b>4</b> → <b>(−)</b>，或 <b>(−)</b> → <b>4</b>，兩種順序都可以。</li>
+        <li>再按一次 <b>(−)</b> 可取消負號。</li>
+        <li>也可以先按 <code>−</code>（減號）再打 4，最後按 <code>=</code> 或 <code>EXE</code> 一樣得到 -4。</li>
+        <li>若按 <b>(−)</b> 打出的是字母 <code>L</code>，代表 <b>ALPHA 模式還開著</b>（看 LCD 的 ALPHA 指示燈），再按一次 <code>ALPHA</code> 關掉即可。</li>
       </ul>
       <h3>2nd / INV 第二功能</h3>
       <ul>
@@ -1009,8 +1021,12 @@ function execStep(s, arr){
 }
 function resumeProgram(){
   if (!M.prog.running) return;
-  if (M.entry !== null && M.entry !== "") M.x = parseFloat(M.entry) || 0;
-  M.entry = null; M.xPushed = false;
+  /* 把等待中的輸入（含待完成的運算）結算成 X：
+     例如先按 − 再打 4 才按 EXE，也會是 -4 */
+  if (M.stack.length || M.entry !== null){
+    if (M.entry !== null && M.entry !== "") M.x = parseFloat(M.entry) || 0;
+    opEquals();
+  }
   M.prog.paused = false;
   runSteps();
 }
@@ -1642,7 +1658,7 @@ document.getElementById("btn-copy-list").addEventListener("click", function(){
    17. 啟動
    ========================================================= */
 /* 版本標記：方便確認手機／瀏覽器有沒有拿到最新版（請於每次更新時遞增） */
-var BUILD = "v1.6";
+var BUILD = "v1.7";
 document.getElementById("build").textContent = BUILD;
 
 /* 啟動：先載回使用者存過的狀態；若是第一次開啟（或還沒播種過），
