@@ -186,9 +186,9 @@ press(["exe"]);
 ok(near(fx().M.x, 15), "1..5 加總 = 15", fx().M.x);
 
 reset();
-fx().loadSample("圓面積（P1）");
+fx().loadSample("圓面積（P3）");
 press(["2"]);
-fx().callArea("P1");
+fx().callArea("P3");
 press(["exe"]);
 ok(near(fx().M.x, 4 * Math.PI, 1e-9), "半徑 2 的圓面積 = 4π", fx().M.x);
 
@@ -224,6 +224,94 @@ fx().M.progs.P7 = [{ t: "lbl", n: 1 }, { t: "isz", r: 2 }, { t: "goto", n: 1 }, 
 fx().M.regs[2] = 0;
 fx().callArea("P7");
 ok(false === true || true, "ISZ 迴圈不會無限執行（有 guard）");
+
+/* ================= 3b. 一元二次方程式（P1） ================= */
+console.log("\n=== 一元二次方程式（P1）===");
+function typeNum(s) {
+  let neg = s.charAt(0) === "-";
+  if (neg) s = s.slice(1);
+  press(s.split("").map((c) => (c === "." ? "dot" : c)));
+  if (neg) press(["sign"]);
+}
+function startQuad() {
+  fx().loadSample("一元二次方程式 (P1)");
+  fx().callArea("P1");
+  press([]);
+}
+reset();
+fx().loadSample("一元二次方程式 (P1)");
+ok(fx().M.progs.P1.length > 100, "方程式程式已載入 P1（共 " + fx().M.progs.P1.length + " 步）");
+startQuad();
+ok(fx().M.prog.paused === true, "啟動後停在第一個提示");
+ok(screen().l1.indexOf("Input A?") === 0, "第一行顯示 Input A?", screen().l1);
+typeNum("1"); press(["exe"]); press([]);
+ok(screen().l1.indexOf("Input B?") === 0, "接著問 Input B?", screen().l1);
+typeNum("-3"); press(["exe"]); press([]);
+ok(screen().l1.indexOf("Input C?") === 0, "接著問 Input C?", screen().l1);
+typeNum("2"); press(["exe"]); press([]);
+ok(near(fx().M.regs[4], 1), "判別式 M04 = b²-4ac = 1", fx().M.regs[4]);
+ok(screen().l1.indexOf("two real roots") === 0, "D>0 → 顯示 two real roots", screen().l1);
+press(["exe"]); press([]);
+ok(near(fx().M.x, 2) && screen().l1.indexOf("x1=") === 0, "x1 = 2（第一行 x1=）", fx().M.x + " / " + screen().l1);
+press(["exe"]); press([]);
+ok(near(fx().M.x, 1) && screen().l1.indexOf("x2=") === 0, "x2 = 1（第一行 x2=）", fx().M.x + " / " + screen().l1);
+ok(fx().M.prog.running === false, "程式執行完畢");
+
+reset();
+startQuad();
+typeNum("2"); press(["exe"]); press([]);
+typeNum("-7"); press(["exe"]); press([]);
+typeNum("3"); press(["exe"]); press([]);
+ok(screen().l1.indexOf("two real roots") === 0, "2x²-7x+3 → two real roots", screen().l1);
+press(["exe"]); press([]);
+const rootA = fx().M.x; press(["exe"]); press([]);
+const rootB = fx().M.x;
+ok(near(rootA, 3) && near(rootB, 0.5), "2x²-7x+3 的兩根 = 3 與 0.5", rootA + " / " + rootB);
+
+reset();
+startQuad();
+typeNum("1"); press(["exe"]); press([]);
+typeNum("0"); press(["exe"]); press([]);
+typeNum("1"); press(["exe"]); press([]);
+ok(near(fx().M.regs[4], -4), "x²+1 的判別式 = -4", fx().M.regs[4]);
+ok(screen().l1.indexOf("no real root") === 0, "D<0 → 顯示 no real root", screen().l1);
+ok(fx().M.prog.running === false, "無實根時程式直接結束（不需再按 EXE）");
+
+reset();
+startQuad();
+typeNum("0"); press(["exe"]); press([]);
+ok(screen().l1.indexOf("not quadratic") === 0, "A=0 → 顯示 not quadratic（不問 B、C）", screen().l1);
+
+reset();
+press(["mode", "1"]);
+press(["2nd", "lp", "2nd", "rp", "2nd", "pi", "2nd", "pct", "2nd", "clr"]);
+const cond = fx().M.progs.P0.map(fx().stepLabel);
+ok(cond.join(" | ") === "X<0 | X>=0 | X=0 | X<>0 | CLS",
+  "2nd 層的條件測試與 CLS 會錄成程式步", cond.join(" | "));
+reset();
+fx().M.progs.P11 = [
+  { t: "num", v: -5 }, { t: "tlt" }, { t: "goto", n: 1 },
+  { t: "num", v: 111 }, { t: "eq" }, { t: "rtn" },
+  { t: "lbl", n: 1 }, { t: "num", v: 222 }, { t: "eq" }, { t: "rtn" },
+];
+fx().callArea("P11");
+ok(near(fx().M.x, 111), "x<0 成立 → 跳過 GOTO（留在主線）", fx().M.x);
+reset();
+fx().M.progs.P12 = [
+  { t: "num", v: 5 }, { t: "tlt" }, { t: "goto", n: 2 },
+  { t: "num", v: 111 }, { t: "eq" }, { t: "rtn" },
+  { t: "lbl", n: 2 }, { t: "num", v: 222 }, { t: "eq" }, { t: "rtn" },
+];
+fx().callArea("P12");
+ok(near(fx().M.x, 222), "x<0 不成立 → 執行 GOTO 跳走", fx().M.x);
+reset();
+press(["alpha"]); press(["1"]); press(["2"]); press(["alpha"]);
+press([]);
+ok(screen().l1.indexOf("BC") === 0, "ALPHA 模式可打字到第一行", screen().l1);
+press(["2nd", "clr"]);
+press([]);
+ok(screen().l1.trim() === "", "RUN 模式 2nd+CLR 清掉第一行", JSON.stringify(screen().l1));
+reset();
 
 /* ================= 4. 顯示 ================= */
 console.log("\n=== 點矩陣顯示 ===");

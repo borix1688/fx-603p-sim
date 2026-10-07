@@ -1,0 +1,140 @@
+﻿CASIO FX-603P SIMULATOR - PROGRAM LISTING
+P1: quadratic equation solver  ax^2 + bx + c = 0
+(131 steps; digitized from the built-in sample)
+
+Usage: MODE 0 (RUN) -> P -> 1 -> type A, EXE, type B, EXE, type C, EXE
+       shows  two real roots  (EXE) -> x1= ... (EXE) -> x2= ...
+       or     no real root / not quadratic
+
+Registers: M04 = discriminant, M05 = sqrt(D), M06 = 2a, M07 = x1, M08 = x2
+   1  ALPHA I
+   2  ALPHA n
+   3  ALPHA p
+   4  ALPHA u
+   5  ALPHA t
+   6  ALPHA  
+   7  ALPHA A
+   8  ALPHA ?
+   9  HLT
+  10  STO 001
+  11  RCL 001
+  12  X<>0
+  13  GOTO 8
+  14  CLS
+  15  ALPHA I
+  16  ALPHA n
+  17  ALPHA p
+  18  ALPHA u
+  19  ALPHA t
+  20  ALPHA  
+  21  ALPHA B
+  22  ALPHA ?
+  23  HLT
+  24  STO 002
+  25  CLS
+  26  ALPHA I
+  27  ALPHA n
+  28  ALPHA p
+  29  ALPHA u
+  30  ALPHA t
+  31  ALPHA  
+  32  ALPHA C
+  33  ALPHA ?
+  34  HLT
+  35  STO 003
+  36  CLS
+  37  RCL 002
+  38  X2
+  39  -
+  40  NUM 4
+  41  *
+  42  RCL 001
+  43  *
+  44  RCL 003
+  45  =
+  46  STO 004
+  47  X>=0
+  48  GOTO 9
+  49  CLS
+  50  ALPHA t
+  51  ALPHA w
+  52  ALPHA o
+  53  ALPHA  
+  54  ALPHA r
+  55  ALPHA e
+  56  ALPHA a
+  57  ALPHA l
+  58  ALPHA  
+  59  ALPHA r
+  60  ALPHA o
+  61  ALPHA o
+  62  ALPHA t
+  63  ALPHA s
+  64  HLT
+  65  RCL 004
+  66  SQRT
+  67  STO 005
+  68  NUM 2
+  69  *
+  70  RCL 001
+  71  =
+  72  STO 006
+  73  CLS
+  74  ALPHA x
+  75  ALPHA 1
+  76  ALPHA =
+  77  RCL 002
+  78  SIGN
+  79  +
+  80  RCL 005
+  81  =
+  82  /
+  83  RCL 006
+  84  =
+  85  STO 007
+  86  HLT
+  87  CLS
+  88  ALPHA x
+  89  ALPHA 2
+  90  ALPHA =
+  91  RCL 002
+  92  SIGN
+  93  -
+  94  RCL 005
+  95  =
+  96  /
+  97  RCL 006
+  98  =
+  99  STO 008
+ 100  RTN
+ 101  LBL 8
+ 102  CLS
+ 103  ALPHA n
+ 104  ALPHA o
+ 105  ALPHA t
+ 106  ALPHA  
+ 107  ALPHA q
+ 108  ALPHA u
+ 109  ALPHA a
+ 110  ALPHA d
+ 111  ALPHA r
+ 112  ALPHA a
+ 113  ALPHA t
+ 114  ALPHA i
+ 115  ALPHA c
+ 116  RTN
+ 117  LBL 9
+ 118  CLS
+ 119  ALPHA n
+ 120  ALPHA o
+ 121  ALPHA  
+ 122  ALPHA r
+ 123  ALPHA e
+ 124  ALPHA a
+ 125  ALPHA l
+ 126  ALPHA  
+ 127  ALPHA r
+ 128  ALPHA o
+ 129  ALPHA o
+ 130  ALPHA t
+ 131  RTN

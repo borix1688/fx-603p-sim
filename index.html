@@ -177,10 +177,10 @@
       <button class="key fn" data-k="xpy"  data-al="T">x^y</button>
       <button class="key fn" data-k="fact" data-al="V">n!</button>
 
-      <button class="key fn" data-k="lp"  data-al="M">(</button>
-      <button class="key fn" data-k="rp"  data-al="N">)</button>
-      <button class="key fn" data-k="pi"  data-al="P">π</button>
-      <button class="key fn" data-k="pct" data-al="Q">%</button>
+      <button class="key fn" data-k="lp"  data-al="M" data-hint="x&lt;0">(</button>
+      <button class="key fn" data-k="rp"  data-al="N" data-hint="x≥0">)</button>
+      <button class="key fn" data-k="pi"  data-al="P" data-hint="x=0">π</button>
+      <button class="key fn" data-k="pct" data-al="Q" data-hint="x≠0">%</button>
       <button class="key fn" data-k="exp" data-al="O">EXP</button>
 
       <button class="key fn" data-k="sto"    data-al=":">STO</button>
@@ -211,7 +211,7 @@
       <button class="key num" data-k="5" data-al="F">5</button>
       <button class="key num" data-k="6" data-al="G">6</button>
       <button class="key op"  data-k="mul">×</button>
-      <button class="key acc" data-k="clr">CLR</button>
+      <button class="key acc" data-k="clr" data-hint="CLS">CLR</button>
 
       <button class="key num" data-k="1" data-al="B">1</button>
       <button class="key num" data-k="2" data-al="C">2</button>
@@ -272,7 +272,8 @@
     <div class="card">
       <h2>範例程式（一鍵載入）</h2>
       <div class="row" id="samples"></div>
-      <p class="warn">載入後：切到 <b>MODE 0 (RUN)</b> → 輸入數字 → 按 <b>P</b> 再按區塊編號（例如 P0）即可執行。程式內用 <code>HLT</code> 等輸入，按 <b>EXE</b> 繼續。</p>
+      <p class="warn"><b>一元二次方程式 (P1)</b>：載入後切到 <b>MODE 0</b> → 按 <b>P</b> → <b>1</b> → 依序輸入 A、B、C（每項按 <b>EXE</b>）→ 顯示 <code>two real roots</code>（按 EXE 續看 x1、x2）或 <code>no real root</code>。A=0 會顯示 <code>not quadratic</code>。</p>
+      <p class="warn">其他範例：載入後切到 <b>MODE 0 (RUN)</b> → 輸入數字 → 按 <b>P</b> 再按區塊編號（例如 P0）即可執行。程式內用 <code>HLT</code> 等輸入，按 <b>EXE</b> 繼續。</p>
     </div>
 
     <div class="card">
@@ -291,6 +292,8 @@
         <li><code>ISZ r</code>：加 1，若為 0 則跳過下一步。</li>
         <li><code>IND</code>：下一個記憶體／跳躍步驟改用「間接」定址（M(r) 的內容當位址）。</li>
         <li><code>HLT</code>：暫停等輸入，按 <b>EXE</b> 繼續。</li>
+        <li><b>條件測試</b>（<code>2nd</code> + 鍵）：<code>x&lt;0</code>（<kbd>(</kbd>）、<code>x≥0</code>（<kbd>)</kbd>）、<code>x=0</code>（<kbd>π</kbd>）、<code>x≠0</code>（<kbd>%</kbd>）。語意與 <code>DSZ</code> 相同：<b>條件成立就跳過下一步</b>，所以慣用法是「測試 → <code>GOTO n</code>」＝ 條件成立時不跳、不成立時跳到 LBL n。</li>
+        <li><code>CLS</code>（<code>2nd</code> + <kbd>CLR</kbd>）：清除第一行文字；在 RUN 模式下直接清掉目前的第一行。</li>
         <li><code>ALPHA</code>：輸入文字（鍵面右上角小字就是 ALPHA 字元），會顯示在第一行。</li>
         <li><code>=</code>：完成運算；程式跑到區塊結尾會自動停止。</li>
       </ul>
@@ -308,6 +311,7 @@
         <li><b>核心忠實</b>：keystroke 錄製與合併（數字字面值／STO+位址／LBL+編號各算一步）、P0–P19、LBL0–L9、DSZ 跳過下一步的語意、HLT+EXE 續跑、IND 間接定址、ALPHA 文字輸出到第一行——都依 FX-603P 公開資料的程式模型實作。</li>
         <li><b>鍵位與 ALPHA 對應是重建</b>：我沒有逐鍵對照的原廠手冊圖，鍵盤排列與「哪個鍵在 ALPHA 下打出哪個字元」是照功能合理配置，鍵面右上角小字即實際對應。</li>
         <li><b>MODE 只實作 0/1/2</b>（RUN／WRT／程式區選擇）；統計、BASE-N、複數、積分等模式未實作。</li>
+        <li><b>條件測試（x&lt;0 / x≥0 / x=0 / x≠0）與 CLS 是我補的</b>：實機確實有條件跳躍指令，但我查不到可逐鍵對照的鍵位與助憶符，因此設計成 <code>2nd</code> 層、語意沿用 Casio 的「成立就跳過下一步」。</li>
         <li><b>顯示</b>：主顯示 2 行 × 16 字元 5×7 點矩陣、右側 4 位步數顯示、20 格狀態指示——皆為點矩陣重繪；步數顯示實機是 7 段式，這裡沿用點矩陣。</li>
         <li><b>精度</b>：內部用 JS double，顯示端做 12 位有效數字與 ±99 指數格式化（實機為 12 位尾數）。</li>
         <li><b>儲存</b>：程式與記憶體存在 <code>localStorage</code>（同一瀏覽器／同一網域）；跨裝置請用 JSON 匯出／匯入。無痕模式或清除網站資料會一併清掉。</li>
@@ -749,6 +753,11 @@ function stepLabel(s){
     case "dsz":  return "DSZ " + (s.r == null ? "" : pad3(s.r));
     case "isz":  return "ISZ " + (s.r == null ? "" : pad3(s.r));
     case "xym":  return "X<>Y";
+    case "cls":  return "CLS";
+    case "tlt":  return "X<0";
+    case "tge":  return "X>=0";
+    case "teq":  return "X=0";
+    case "tne":  return "X<>0";
     case "alpha":return "ALPHA " + s.ch;
     case "fix":  return "FIX " + s.v;
     case "sci":  return "SCI " + s.v;
@@ -967,6 +976,12 @@ function execStep(s, arr){
       return M.regs[regIndex(r2)] === 0;
     }
     case "xym":  var t = M.x; M.x = M.y; M.y = t; return false;
+    case "cls":  M.alphaLine = ""; return false;
+    /* 條件測試：條件成立就跳過下一步（與 DSZ 同語意，用來搭配 GOTO 做分支） */
+    case "tlt":  return curX() < 0;
+    case "tge":  return curX() >= 0;
+    case "teq":  return curX() === 0;
+    case "tne":  return curX() !== 0;
     case "alpha": if (M.alphaLine.length < 16) M.alphaLine += s.ch; return false;
     case "deg":  M.deg = true; M.rad = false; M.gra = false; return false;
     case "rad":  M.deg = false; M.rad = true; M.gra = false; return false;
@@ -1011,6 +1026,21 @@ function secondAction(k){
     case "sqrt": unary("int"); break;
     case "invx": unary("frac"); break;
     case "fact": unary("rnd"); break;
+    case "clr": M.alphaLine = ""; break;              // 清掉第一行文字
+    case "lp": case "rp": case "pi": case "pct": break; // 條件測試只在程式中有意義
+  }
+  M.second = false;
+  M.dirty = true;
+}
+/* MODE 1 的 2nd 層：條件測試與 CLS 錄成程式步，其餘照第二功能處理 */
+function wrtSecond(k){
+  switch(k){
+    case "lp":  wrtPush({ t:"tlt" }); break;
+    case "rp":  wrtPush({ t:"tge" }); break;
+    case "pi":  wrtPush({ t:"teq" }); break;
+    case "pct": wrtPush({ t:"tne" }); break;
+    case "clr": wrtPush({ t:"cls" }); break;
+    default: secondAction(k); return;
   }
   M.second = false;
   M.dirty = true;
@@ -1083,7 +1113,12 @@ function press(k, v){
   if (k === "on"){ if (!M.prog.running) acKey(); return; }
   if (k === "2nd"){ M.second = !M.second; M.inv = false; M.dirty = true; return; }
   if (k === "inv"){ M.inv = !M.inv; M.second = false; M.dirty = true; return; }
-  if (M.second){ secondAction(rawK); return; }
+  if (M.second){
+    /* WRT 模式下 2nd 層的條件測試／CLS 會變成程式步 */
+    if (M.mode === 1 && !M.prog.running) wrtSecond(rawK);
+    else secondAction(rawK);
+    return;
+  }
   if (M.inv){ invAction(rawK); return; }
 
   /* MODE 1：錄製 */
@@ -1402,14 +1437,43 @@ function renderSamples(){
 /* =========================================================
    15. 範例程式
    ========================================================= */
+/* 把一段文字變成連續的 ALPHA 程式步 */
+function atxt(str){
+  return str.split("").map(function(c){ return { t:"alpha", ch:c }; });
+}
 var SAMPLES = [
+  { name:"一元二次方程式 (P1)", area:"P1",
+    steps: [].concat(
+      atxt("Input A?"), [{t:"hlt"},{t:"sto",n:1,ind:false}],
+      [{t:"rcl",n:1,ind:false},{t:"tne"},{t:"goto",n:8}],                 // A=0 → 不是二次式
+      [{t:"cls"}], atxt("Input B?"), [{t:"hlt"},{t:"sto",n:2,ind:false}],
+      [{t:"cls"}], atxt("Input C?"), [{t:"hlt"},{t:"sto",n:3,ind:false}],
+      [{t:"cls"},
+       {t:"rcl",n:2,ind:false},{t:"fn",v:"x2"},{t:"op",v:"-"},
+       {t:"num",v:4},{t:"op",v:"*"},{t:"rcl",n:1,ind:false},{t:"op",v:"*"},
+       {t:"rcl",n:3,ind:false},{t:"eq"},{t:"sto",n:4,ind:false}],         // M04 = b²-4ac
+      [{t:"tge"},{t:"goto",n:9}],                                          // D<0 → 無實根
+      [{t:"cls"}], atxt("two real roots"), [{t:"hlt"}],
+      [{t:"rcl",n:4,ind:false},{t:"fn",v:"sqrt"},{t:"sto",n:5,ind:false}], // M05 = √D
+      [{t:"num",v:2},{t:"op",v:"*"},{t:"rcl",n:1,ind:false},{t:"eq"},{t:"sto",n:6,ind:false}], // M06 = 2a
+      [{t:"cls"}], atxt("x1="),
+      [{t:"rcl",n:2,ind:false},{t:"fn",v:"sign"},{t:"op",v:"+"},{t:"rcl",n:5,ind:false},{t:"eq"},
+       {t:"op",v:"/"},{t:"rcl",n:6,ind:false},{t:"eq"},{t:"sto",n:7,ind:false}],   // x1 = (-b+√D)/2a
+      [{t:"hlt"}],
+      [{t:"cls"}], atxt("x2="),
+      [{t:"rcl",n:2,ind:false},{t:"fn",v:"sign"},{t:"op",v:"-"},{t:"rcl",n:5,ind:false},{t:"eq"},
+       {t:"op",v:"/"},{t:"rcl",n:6,ind:false},{t:"eq"},{t:"sto",n:8,ind:false}],   // x2 = (-b-√D)/2a
+      [{t:"rtn"}],
+      [{t:"lbl",n:8},{t:"cls"}], atxt("not quadratic"), [{t:"rtn"}],
+      [{t:"lbl",n:9},{t:"cls"}], atxt("no real root"), [{t:"rtn"}]
+    ) },
   { name:"階乘 n!（P0）", area:"P0", steps:[
       {t:"alpha",ch:"n"},{t:"alpha",ch:"!"},{t:"alpha",ch:"="},
       {t:"hlt"},{t:"sto",n:0,ind:false},{t:"num",v:1},
       {t:"lbl",n:0},{t:"op",v:"*"},{t:"rcl",n:0,ind:false},
       {t:"dsz",r:0},{t:"goto",n:0,ind:false},{t:"eq"}
     ], hint:"輸入 5 後按 EXE → 120" },
-  { name:"圓面積（P1）", area:"P1", steps:[
+  { name:"圓面積（P3）", area:"P3", steps:[
       {t:"alpha",ch:"A"},{t:"alpha",ch:"="},{t:"hlt"},
       {t:"fn",v:"x2"},{t:"op",v:"*"},{t:"fn",v:"pi"},{t:"eq"}
     ], hint:"輸入半徑後按 EXE" },
