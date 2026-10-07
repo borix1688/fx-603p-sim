@@ -36,9 +36,28 @@ class El {
   setAttribute(k, v) { this._attr[k] = String(v); }
   getAttribute(k) { return Object.prototype.hasOwnProperty.call(this._attr, k) ? this._attr[k] : null; }
   addEventListener(t, f) { (this._listeners[t] = this._listeners[t] || []).push(f); }
-  click() { (this._listeners.click || []).forEach((f) => f({ target: this })); }
+  /* 模擬事件冒泡：click 會往上冒到父層的監聽器（target 仍是最初被點的節點） */
+  click() {
+    let n = this;
+    while (n) {
+      (n._listeners.click || []).forEach((f) => f({ target: this }));
+      n = n.parentNode;
+    }
+  }
+  /* 支援 "[attr]" 與 ".class" 兩種選擇器（本測試夠用） */
+  closest(sel) {
+    let n = this;
+    while (n) {
+      if (sel.charAt(0) === "[" && sel.charAt(sel.length - 1) === "]") {
+        if (n.getAttribute && n.getAttribute(sel.slice(1, -1)) !== null) return n;
+      } else if (sel.charAt(0) === ".") {
+        if (n._cls && n._cls.has(sel.slice(1))) return n;
+      }
+      n = n.parentNode;
+    }
+    return null;
+  }
   blur() {}
-  closest() { return null; }
   select() {}
 }
 
@@ -337,6 +356,32 @@ reset();
 press(["mode", "1"]);
 press(["pk", "5"]);
 ok(fx().M.area === "P5" && fx().M.mode === 1, "WRT 模式下 P → 5 = 切換錄製目標到 P5", fx().M.area);
+reset();
+
+/* ================= 3d. 區塊檢視／內建範例分布 ================= */
+console.log("\n=== 區塊檢視與內建範例分布 ===");
+reset();
+const areasWith = [];
+for (let i = 0; i < 20; i++) if (fx().M.progs["P" + i].length) areasWith.push("P" + i);
+ok(areasWith.length === 0, "reset 後 20 個區塊都是空的", areasWith.join(","));
+fx().samples.forEach((s) => {
+  fx().loadSample(s.name);
+  ok(fx().M.progs[s.area].length > 0, "範例「" + s.name + "」載入到 " + s.area +
+    "（" + fx().M.progs[s.area].length + " 步）");
+});
+reset();
+fx().loadSample("1..n 加總（P2）");
+ok(fx().M.progs.P2.length === 13, "P2 = 1..n 加總（13 步）", fx().M.progs.P2.length);
+/* MODE 2 點區塊只切換檢視，不執行 */
+fx().setMode(2);
+els.pgrid.children[1].click();                       // 面板上的 P1 按鈕
+ok(fx().M.area === "P1" && fx().M.prog.running === false,
+  "MODE 2 (EDIT) 點區塊只切換檢視、不會執行", fx().M.area + " running=" + fx().M.prog.running);
+fx().setMode(0);
+fx().loadSample("圓面積（P3）");
+els.pgrid.children[3].click();                       // RUN 模式下點 P3
+ok(fx().M.prog.paused === true, "MODE 0 (RUN) 點區塊會直接執行", fx().M.prog.paused);
+press(["ac"]);
 reset();
 
 /* ================= 4. 顯示 ================= */

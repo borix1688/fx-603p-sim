@@ -260,7 +260,9 @@
 
     <div class="card">
       <h2>程式區塊</h2>
-      <p class="warn"><b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<b>MODE 1 (WRT)</b> 時點區塊 = 切換錄製目標區塊。</p>
+      <p class="warn"><b>要執行程式</b>：先確認在 <b>MODE 0 (RUN)</b>，然後直接點下面的區塊編號（<b>P10–P19 只能用這裡點</b>）；鍵盤做法是按 <kbd>P</kbd> 再按 <b>0–9</b>，按完立刻執行。<br>
+        <b>要看某個區塊裡有什麼程式</b>：切到 <b>MODE 2 (EDIT)</b> 或 <b>MODE 1 (WRT)</b> 再點該區塊（只切換檢視，不會執行），下方清單就會顯示內容。<br>
+        <b>首次開啟時 20 個區塊都是空的</b>——內建範例要按上面的範例按鈕才會載入。</p>
       <div class="pgrid" id="pgrid"></div>
       <pre class="list" id="listing">（尚無程式步）</pre>
       <div class="row">
@@ -1501,8 +1503,9 @@ document.getElementById("pgrid").addEventListener("click", function(ev){
   var b = ev.target.closest ? ev.target.closest("[data-p]") : null;
   if (!b) return;
   var name = b.getAttribute("data-p");
-  if (M.mode === 1){ M.area = name; M.dirty = true; autosave(); }
-  else { callArea(name); }
+  /* RUN 模式：點了就執行；WRT / EDIT 模式：只切換目標區塊（唯讀檢視） */
+  if (M.mode === 0){ callArea(name); }
+  else { M.area = name; M.dirty = true; autosave(); }
   renderPGrid(); renderListing(); render();
 });
 document.getElementById("samples").addEventListener("click", function(ev){
